@@ -1,0 +1,13 @@
+Transport-related parameters for TMAS model
+15        tempInitial
+25        tempIn
+100         kCAir
+0.6       kSlur
+1         kConc
+1000      cpConc
+4200      cpSlurry
+2300      dConc
+1000      dSlurry
+0.1       glConc
+0.03      glSlur
+

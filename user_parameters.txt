@@ -1,0 +1,15 @@
+User-specified parameters for TMAS model
+0001      Run ID code (ID)
+365       Number of days in simulation (nDays)
+1         Starting day of simulation as day of year (1-365) (startingDOY)
+3         Number of slurry pits or channels (nChannels)
+2         Depth of slurry pit or channel (m) (channelDepth)
+5         Length of slurry pit or channel (m) (length)
+2         Width of slurry pit or channel (m) (width)
+1.5       Depth of slurry within pit or channel (m) (slurrryDepth)
+0         Minimum daily average air temperature (degrees C) (minAnnTemp)
+25        Maximum daily average air temperature (degrees C) (maxAnnTemp)
+150       Hottest day of year (integer) (hottestDOY)
+10        Slurry production rate (tonnes/d) (slurryProd)
+H         N = natural ventilation, H = mechanical ventilation with heating
+          H option requires a separate file target_temp.txt. See example.
