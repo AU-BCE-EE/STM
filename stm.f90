@@ -1,4 +1,4 @@
-PROGRAM tmas
+PROGRAM stm
 
   ! Simple temperature model for slurry in channels or pits in a barn
   ! Date           Who                         Description
@@ -8,6 +8,7 @@ PROGRAM tmas
   ! 31 MAR 2015   S. Hafner                    Added option for mechanical ventilation with heating, changed calculation of air
   !                                            temperature and substrate temperatures
   ! 08 MAY 2015   S. Hafner                    Changed name of transport_parameters.txt to transfer_parameters.txt 
+  ! 26 May 2020   S. Hafner                    Create STM repo, will use Git for tracking development
 
   IMPLICIT NONE
   
@@ -23,6 +24,8 @@ PROGRAM tmas
   INTEGER :: nDays       ! Number of days in simulation
   INTEGER :: startingDOY ! Starting day of year
   INTEGER :: hottestDOY  ! Hottest day of year
+  INTEGER :: emptyDOY1   ! 
+  INTEGER :: emptyDOY2   ! 
   INTEGER :: wallAvePeriod, floorAvePeriod ! Number of days in running averages for wall and floor temperature
   INTEGER :: fileStat    ! End of file indicator of target_temp.txt
 
@@ -46,15 +49,19 @@ PROGRAM tmas
   ! Geometry of channel or pit
   REAL :: slurryDepth    ! Depth of slurry in channel/pit (m)
   REAL :: channelDepth   ! Total depth of channel/pit (m)
+  REAL :: buriedDepth    ! Buried depth (m)
   REAL :: wallDepth      ! Depth at which horizontal heat transfer is evaluated (m) 
   REAL :: length, width  ! Length and width of channel/pit (m)
   REAL :: areaFloor      ! Channel or pit floor area (m2)
   REAL :: areaWall       ! Channel or pit wall area (m2)
   REAL :: areaSurf       ! Slurry upper surface area (m2)
+  REAL :: areaConv       ! 
+  REAL :: areaSol        ! 
   INTEGER :: nChannels   ! Number of channels or pits
   
   ! Other slurry variables
   REAL :: massSlurry     ! Total slurry mass (kg)
+  REAL :: slurryVol      ! Initial slurry volume (m3) NTS not consistent name
   REAL :: slurryProd     ! Slurry production rate (= inflow = outflow) (tonnes/d)
 
   ! Heat transfer coefficients and related variables
@@ -106,19 +113,24 @@ PROGRAM tmas
   READ(1,*) startingDOY
   READ(1,*) nChannels
   READ(1,*) channelDepth
+  READ(1,*) buriedDepth
   READ(1,*) length
   READ(1,*) width
-  READ(1,*) slurryDepth
+  READ(1,*) areaConv
+  READ(1,*) areaSol
+  READ(1,*) slurryVol
   READ(1,*) minAnnTemp
   READ(1,*) maxAnnTemp 
   READ(1,*) hottestDOY
   READ(1,*) slurryProd
+  READ(1,*) tempIn
+  READ(1,*) emptyDOY1
+  READ(1,*) emptyDOY2 
   READ(1,*) ventType
 
   ! Other parameters
   READ(2,*) 
   READ(2,*) tempInitial
-  READ(2,*) tempIn
   READ(2,*) kCAir
   READ(2,*) kSlur
   READ(2,*) kConc
@@ -130,19 +142,18 @@ PROGRAM tmas
   READ(2,*) glSlur
 
   ! Output file header
-  WRITE(10,*) 'Day of  Day of  Air    Wall  Floor  Slurry'
-  WRITE(10,*) 'sim.     year    T      T      T      T'
+  WRITE(10,*) 'Day of  Day of  Slurry  Air    Wall  Floor  Slurry'
+  WRITE(10,*) 'sim.     year    mass    T      T      T      T'
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Initial calculations
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Calculate some geometry-related variables
-  wallDepth = (channelDepth - 0.5*slurryDepth)
+  wallDepth = 0.5 * buriedDepth
   areaFloor = width*length*nChannels
   areaSurf = width*length*nChannels
-  areaWall = slurryDepth*2.*(length + width)*nChannels
-  massSlurry = dSlurry*slurryDepth*width*length*nChannels    ! Slurry total mass in kg
+  massSlurry = slurryVol * dSlurry
 
   ! Substrate damping depth
   dampDepth = SQRT(2.*(kConc/(dConc*cpConc))*3600.*24./(2.*PI/365.))
@@ -182,38 +193,50 @@ PROGRAM tmas
   ! Substrate temperature based on moving average
   ! NTS: how about aveperiods > 365?
   wallAvePeriod = wallDepth/3.0*365
-  floorAvePeriod = channelDepth/3.0*365
+  floorAvePeriod = buriedDepth/3.0*365
 
   ! Calculate moving average for first day of year
   ! Wall first
-  ! First need to calculate value for DOY = 1
-  tempWall(1) = 0
-  DO DOY = 365 - wallAvePeriod + 2,365,1
-    tempWall(1) = tempWall(1) + tempAir(DOY)/wallAvePeriod
-  END DO
+  IF (wallAvePeriod > 365) THEN
+    DO DOY = 1,365,1
+      tempWall(DOY) = (minAnnTemp + maxAnnTemp)/2.
+    END DO
+  ELSE 
+    ! First need to calculate value for DOY = 1
+    tempWall(1) = 0
+    DO DOY = 365 - wallAvePeriod + 2,365,1
+      tempWall(1) = tempWall(1) + tempAir(DOY)/wallAvePeriod
+    END DO
 
-  DO DOY = 2,365,1
-    IF (DOY > wallAvePeriod) THEN
-      tempWall(DOY) = tempWall(DOY - 1) - tempAir(DOY - wallAvePeriod)/wallAvePeriod + tempAir(DOY)/wallAvePeriod
-    ELSE 
-      tempWall(DOY) = tempWall(DOY - 1) - tempAir(365 + DOY - wallAvePeriod)/wallAvePeriod + tempAir(DOY)/wallAvePeriod
-    END IF 
-  END DO
+    DO DOY = 2,365,1
+      IF (DOY > wallAvePeriod) THEN
+        tempWall(DOY) = tempWall(DOY - 1) - tempAir(DOY - wallAvePeriod)/wallAvePeriod + tempAir(DOY)/wallAvePeriod
+      ELSE 
+        tempWall(DOY) = tempWall(DOY - 1) - tempAir(365 + DOY - wallAvePeriod)/wallAvePeriod + tempAir(DOY)/wallAvePeriod
+      END IF 
+    END DO
+  END IF
 
   ! Then floor
-  ! First need to calculate value for DOY = 1
-  tempFloor(1) = 0
-  DO DOY = 365 - floorAvePeriod + 2,365,1
-    tempFloor(1) = tempFloor(1) + tempAir(DOY)/floorAvePeriod
-  END DO
+  IF (floorAvePeriod > 365) THEN
+    DO DOY = 1,365,1
+      tempFloor(DOY) = (minAnnTemp + maxAnnTemp)/2.
+    END DO
+  ELSE 
+    ! First need to calculate value for DOY = 1
+    tempFloor(1) = 0
+    DO DOY = 365 - floorAvePeriod + 2,365,1
+      tempFloor(1) = tempFloor(1) + tempAir(DOY)/floorAvePeriod
+    END DO
 
-  DO DOY = 2,365,1
-    IF (DOY > floorAvePeriod) THEN
-      tempFloor(DOY) = tempFloor(DOY - 1) - tempAir(DOY - floorAvePeriod)/floorAvePeriod + tempAir(DOY)/floorAvePeriod
-    ELSE 
-      tempFloor(DOY) = tempFloor(DOY - 1) - tempAir(365 + DOY - floorAvePeriod)/floorAvePeriod + tempAir(DOY)/floorAvePeriod
-    END IF 
-  END DO
+    DO DOY = 2,365,1
+      IF (DOY > floorAvePeriod) THEN
+        tempFloor(DOY) = tempFloor(DOY - 1) - tempAir(DOY - floorAvePeriod)/floorAvePeriod + tempAir(DOY)/floorAvePeriod
+      ELSE 
+        tempFloor(DOY) = tempFloor(DOY - 1) - tempAir(365 + DOY - floorAvePeriod)/floorAvePeriod + tempAir(DOY)/floorAvePeriod
+      END IF 
+    END DO
+  END IF
 
   ! Set initial slurry temperature
   tempSlurry = tempInitial
@@ -231,16 +254,34 @@ PROGRAM tmas
       DOY = 1
     END IF
 
+    ! Empty and add slurry at beginning of day
+    IF (DOY == emptyDOY1 .OR. DOY == emptyDOY2) THEN
+      massSlurry = 0
+    END IF
+
+    ! Update slurry mass and temperature from addition
+    tempSlurry = (tempSlurry * massSlurry + tempIn * slurryProd)/(massSlurry + slurryProd)
+    massSlurry = massSlurry + slurryProd
+
+    ! Get depth and wall area
+    slurryDepth = massSlurry / (dslurry*width*length*nchannels)  ! Slurry depth in m
+    areaWall = slurryDepth*2.*(length + width)*nChannels
+
     ! Start hour loop
     sumTempSlurry = 0
     DO HR = 1,24,1
     
       ! Calculate heat transfer rates, all in Watts (J/s)
-      Qslur2air = kCAir*(tempSlurry - tempAir(DOY))*areaSurf
+      ! WIP NTS set limit in input file
+      IF (massSlurry > 50000) THEN
+        Qslur2air = kCAir*(tempSlurry - tempAir(DOY))*areaConv
+        Qslur2floor = 1./(glConc/kConc + glSlur/kSlur)*(tempSlurry - tempFloor(DOY))*areaFloor
+      ELSE
+        Qslur2air = 0
+        Qslur2floor = 0
+      END IF
       Qslur2wall = 1./(glConc/kConc + glSlur/kSlur)*(tempSlurry - tempWall(DOY))*areaWall
-      Qslur2floor = 1./(glConc/kConc + glSlur/kSlur)*(tempSlurry - tempFloor(DOY))*areaFloor
-      Qslur2eff = slurryProd*1000./(24.*3600.)*(tempSlurry - tempIn)*cpSlurry
-      Qout = Qslur2air + Qslur2wall + Qslur2floor + Qslur2eff
+      Qout = Qslur2air + Qslur2wall + Qslur2floor
 
       ! Update slurry temperature
       tempSlurry = tempSlurry - Qout*3600./(cpSlurry*massSlurry)
@@ -249,7 +290,7 @@ PROGRAM tmas
       !WRITE(11,*) Qslur2air/areaSurf,Qslur2wall/areaWall,Qslur2floor/areaFloor,Qslur2eff,Qout
     END DO
 
-    WRITE(10,"(1X,I4,5X,I3,1X,5F7.1)") DOS,DOY,tempAir(DOY),tempWall(DOY),tempFloor(DOY),sumTempSlurry/24.
+    WRITE(10,"(1X,I4,5X,I3,1X,6F7.1)") DOS,DOY,massSlurry, tempAir(DOY),tempWall(DOY),tempFloor(DOY),sumTempSlurry/24.
 
   END DO
 
@@ -261,4 +302,4 @@ PROGRAM tmas
   CLOSE(11)
 
   STOP
-END PROGRAM tmas
+END PROGRAM stm

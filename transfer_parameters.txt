@@ -1,6 +1,5 @@
 Transport-related parameters for TMAS model
 15        tempInitial
-25        tempIn
 100         kCAir
 0.6       kSlur
 1         kConc
