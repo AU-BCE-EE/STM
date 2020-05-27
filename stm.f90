@@ -35,7 +35,7 @@ PROGRAM stm
 
   ! Temperatures, all in degrees C
   REAL, DIMENSION(365) :: tempAir, tempFloor, tempWall ! Air, floor (bottom of channel or pit), and wall (side of channel or pit)
-  REAL :: tempSum
+  REAL :: tempSum, dTemp
   REAL :: tempTarget     ! Target temperature for a particular period when heated
   REAL :: nextTempTarget     ! Target temperature for a particular period when heated
   REAL :: maxAnnTemp     ! Maximum daily average air temperature over the year
@@ -142,8 +142,8 @@ PROGRAM stm
   READ(2,*) glSlur
 
   ! Output file header
-  WRITE(10,*) 'Day of  Day of  Slurry  Air    Wall  Floor  Slurry'
-  WRITE(10,*) 'sim.     year    mass    T      T      T      T'
+  WRITE(10,*) 'Day of  Day of  Slurry  Slurry  Air    Wall  Floor  Slurry'
+  WRITE(10,*) 'sim.     year    mass   depth    T      T      T      T'
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Initial calculations
@@ -153,7 +153,7 @@ PROGRAM stm
   wallDepth = 0.5 * buriedDepth
   areaFloor = width*length*nChannels
   areaSurf = width*length*nChannels
-  massSlurry = slurryVol * dSlurry / 1000
+  massSlurry = slurryVol * dSlurry / 1000 ! Slurry mass is in tonnes = 1000 kg
 
   ! Substrate damping depth
   dampDepth = SQRT(2.*(kConc/(dConc*cpConc))*3600.*24./(2.*PI/365.))
@@ -267,33 +267,34 @@ PROGRAM stm
     slurryDepth = 1000 * massSlurry / (dSlurry*width*length*nchannels)  ! Slurry depth in m
     areaWall = slurryDepth*2.*(length + width)*nChannels
 
-    IF (slurryDepth > 0.02) THEN
+    ! Start hour loop
+    sumTempSlurry = 0
+
+    DO HR = 1,24,1
     
-      ! Start hour loop
-      sumTempSlurry = 0
+      ! Calculate heat transfer rates, all in Watts (J/s)
+      ! WIP NTS set limit in input file
+      Qslur2air = kCAir*(tempSlurry - tempAir(DOY))*areaConv
+      Qslur2floor = 1./(glConc/kConc + glSlur/kSlur)*(tempSlurry - tempFloor(DOY))*areaFloor
+      Qslur2wall = 1./(glConc/kConc + glSlur/kSlur)*(tempSlurry - tempWall(DOY))*areaWall
+      Qout = Qslur2air + Qslur2wall + Qslur2floor
 
-      DO HR = 1,24,1
-    
-        ! Calculate heat transfer rates, all in Watts (J/s)
-        ! WIP NTS set limit in input file
-        Qslur2air = kCAir*(tempSlurry - tempAir(DOY))*areaConv
-        Qslur2floor = 1./(glConc/kConc + glSlur/kSlur)*(tempSlurry - tempFloor(DOY))*areaFloor
-        Qslur2wall = 1./(glConc/kConc + glSlur/kSlur)*(tempSlurry - tempWall(DOY))*areaWall
-        Qout = Qslur2air + Qslur2wall + Qslur2floor
+      ! Update slurry temperature
+      dTemp = Qout*3600./(cpSlurry*massSlurry)
 
-        ! Update slurry temperature
-        tempSlurry = tempSlurry - Qout*3600./(cpSlurry*massSlurry)
-        sumTempSlurry = sumTempSlurry + tempSlurry
+      IF (dTemp < -1.) THEN
+        dTemp = -1.
+      ELSE IF (dTemp > 1) THEN
+        dTemp = 1
+      END IF 
 
-      END DO
+      tempSlurry = tempSlurry - dTemp
+      sumTempSlurry = sumTempSlurry + tempSlurry
 
-    ! If slurry depth is very low, set to floor temperature
-    ELSE
-      tempSlurry = tempFloor(DOY)
-      sumTempSlurry = 24. * tempSlurry
-    END IF
+    END DO
 
-    WRITE(10,"(1X,I4,5X,I3,1X,6F7.1)") DOS,DOY,massSlurry, tempAir(DOY),tempWall(DOY),tempFloor(DOY),sumTempSlurry/24.
+
+    WRITE(10,"(1X,I4,5X,I3,1X,7F7.1)") DOS,DOY,massSlurry, slurryDepth, tempAir(DOY),tempWall(DOY),tempFloor(DOY),sumTempSlurry/24.
 
   END DO
 
