@@ -4,7 +4,7 @@ Transport-related parameters for TMAS model
 0.6       kSlur
 1         kConc
 1000      cpConc
-4200      cpSlurry
+4200      cpSlurry (J/kg-K)
 2300      dConc
 1000      dSlurry
 0.1       glConc

@@ -153,7 +153,7 @@ PROGRAM stm
   wallDepth = 0.5 * buriedDepth
   areaFloor = width*length*nChannels
   areaSurf = width*length*nChannels
-  massSlurry = slurryVol * dSlurry
+  massSlurry = slurryVol * dSlurry / 1000
 
   ! Substrate damping depth
   dampDepth = SQRT(2.*(kConc/(dConc*cpConc))*3600.*24./(2.*PI/365.))
@@ -264,31 +264,34 @@ PROGRAM stm
     massSlurry = massSlurry + slurryProd
 
     ! Get depth and wall area
-    slurryDepth = massSlurry / (dslurry*width*length*nchannels)  ! Slurry depth in m
+    slurryDepth = 1000 * massSlurry / (dSlurry*width*length*nchannels)  ! Slurry depth in m
     areaWall = slurryDepth*2.*(length + width)*nChannels
 
-    ! Start hour loop
-    sumTempSlurry = 0
-    DO HR = 1,24,1
+    IF (slurryDepth > 0.02) THEN
     
-      ! Calculate heat transfer rates, all in Watts (J/s)
-      ! WIP NTS set limit in input file
-      IF (massSlurry > 50000) THEN
+      ! Start hour loop
+      sumTempSlurry = 0
+
+      DO HR = 1,24,1
+    
+        ! Calculate heat transfer rates, all in Watts (J/s)
+        ! WIP NTS set limit in input file
         Qslur2air = kCAir*(tempSlurry - tempAir(DOY))*areaConv
         Qslur2floor = 1./(glConc/kConc + glSlur/kSlur)*(tempSlurry - tempFloor(DOY))*areaFloor
-      ELSE
-        Qslur2air = 0
-        Qslur2floor = 0
-      END IF
-      Qslur2wall = 1./(glConc/kConc + glSlur/kSlur)*(tempSlurry - tempWall(DOY))*areaWall
-      Qout = Qslur2air + Qslur2wall + Qslur2floor
+        Qslur2wall = 1./(glConc/kConc + glSlur/kSlur)*(tempSlurry - tempWall(DOY))*areaWall
+        Qout = Qslur2air + Qslur2wall + Qslur2floor
 
-      ! Update slurry temperature
-      tempSlurry = tempSlurry - Qout*3600./(cpSlurry*massSlurry)
-      sumTempSlurry = sumTempSlurry + tempSlurry
+        ! Update slurry temperature
+        tempSlurry = tempSlurry - Qout*3600./(cpSlurry*massSlurry)
+        sumTempSlurry = sumTempSlurry + tempSlurry
 
-      !WRITE(11,*) Qslur2air/areaSurf,Qslur2wall/areaWall,Qslur2floor/areaFloor,Qslur2eff,Qout
-    END DO
+      END DO
+
+    ! If slurry depth is very low, set to floor temperature
+    ELSE
+      tempSlurry = tempFloor(DOY)
+      sumTempSlurry = 24. * tempSlurry
+    END IF
 
     WRITE(10,"(1X,I4,5X,I3,1X,6F7.1)") DOS,DOY,massSlurry, tempAir(DOY),tempWall(DOY),tempFloor(DOY),sumTempSlurry/24.
 
