@@ -56,8 +56,15 @@ PROGRAM stm
   REAL :: areaWall       ! Channel or pit wall area (m2)
   REAL :: areaSurf       ! Slurry upper surface area (m2)
   REAL :: areaConv       ! 
-  REAL :: areaSol        ! 
   INTEGER :: nChannels   ! Number of channels or pits
+
+  ! Solar
+  REAL :: areaSol        ! 
+  REAL :: absorp         !
+  REAL :: maxAnnRad      ! Maximum daily average radiation over the year
+  REAL :: minAnnRad      ! Minimum daily average radiation over the year
+  REAL, DIMENSION(365) :: solRad
+  REAL :: trigPartRad    ! Sine part of radiation expression
   
   ! Other slurry variables
   REAL :: massSlurry     ! Total slurry mass (kg)
@@ -77,6 +84,7 @@ PROGRAM stm
   REAL :: glSlur         ! Gradient length within slurry in m
 
   ! Heat flux variables in W/m2 out of slurry
+  REAL :: Qrad           ! "To" sun
   REAL :: Qslur2air      ! To air
   REAL :: Qslur2wall     ! To wall
   REAL :: Qslur2floor    ! To floor
@@ -118,10 +126,13 @@ PROGRAM stm
   READ(1,*) width
   READ(1,*) areaConv
   READ(1,*) areaSol
+  READ(1,*) absorp
   READ(1,*) slurryVol
   READ(1,*) minAnnTemp
   READ(1,*) maxAnnTemp 
   READ(1,*) hottestDOY
+  READ(1,*) minAnnRad
+  READ(1,*) maxAnnRad 
   READ(1,*) slurryProd
   READ(1,*) tempIn
   READ(1,*) emptyDOY1
@@ -158,12 +169,15 @@ PROGRAM stm
   ! Substrate damping depth
   dampDepth = SQRT(2.*(kConc/(dConc*cpConc))*3600.*24./(2.*PI/365.))
 
-  ! Determine airTemp and substrate temperatures for a complete year
+  ! Determine airTemp, solRad, and substrate temperatures for a complete year
   ! Start day loop
   DO DOY = 1,365,1
     ! Use sine curve to determine air temp
     trigPartTemp = (maxAnnTemp - minAnnTemp)*SIN((DOY - hottestDOY)*2*PI/365. + 0.5*PI)/2.
     tempAir(DOY) = trigPartTemp + (minAnnTemp + maxAnnTemp)/2.
+
+    trigPartRad = (maxAnnRad - minAnnRad)*SIN((DOY - hottestDOY)*2*PI/365. + 0.5*PI)/2.
+    solRad(DOY) = trigPartRad + (minAnnRad + maxAnnRad)/2.
   END DO
 
   ! If heated, correct air temperature if it is colder than target 
@@ -270,6 +284,9 @@ PROGRAM stm
     ! Start hour loop
     sumTempSlurry = 0
 
+    ! Radiation fixed for day (W = J/s)
+    Qrad = - solRad(DOY) * areaSol
+
     DO HR = 1,24,1
     
       ! Calculate heat transfer rates, all in Watts (J/s)
@@ -277,15 +294,15 @@ PROGRAM stm
       Qslur2air = kCAir*(tempSlurry - tempAir(DOY))*areaConv
       Qslur2floor = 1./(glConc/kConc + glSlur/kSlur)*(tempSlurry - tempFloor(DOY))*areaFloor
       Qslur2wall = 1./(glConc/kConc + glSlur/kSlur)*(tempSlurry - tempWall(DOY))*areaWall
-      Qout = Qslur2air + Qslur2wall + Qslur2floor
+      Qout = Qrad + Qslur2air + Qslur2wall + Qslur2floor
 
       ! Update slurry temperature
       dTemp = Qout*3600./(cpSlurry*massSlurry)
 
-      IF (dTemp < -1.) THEN
-        dTemp = -1.
-      ELSE IF (dTemp > 1) THEN
-        dTemp = 1
+      IF (dTemp < -0.1) THEN
+        dTemp = -0.1
+      ELSE IF (dTemp > 0.1) THEN
+        dTemp = 0.1
       END IF 
 
       tempSlurry = tempSlurry - dTemp
@@ -294,7 +311,8 @@ PROGRAM stm
     END DO
 
 
-    WRITE(10,"(1X,I4,5X,I3,1X,7F7.1)") DOS,DOY,massSlurry, slurryDepth, tempAir(DOY),tempWall(DOY),tempFloor(DOY),sumTempSlurry/24.
+    WRITE(10,"(1X,I4,5X,I3,1X,7F7.1,5X,F15.1)") DOS, DOY, massSlurry, slurryDepth, tempAir(DOY), tempWall(DOY), tempFloor(DOY), &
+      & sumTempSlurry/24., Qout 
 
   END DO
 

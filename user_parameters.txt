@@ -1,5 +1,5 @@
 User-specified parameters for TMAS model
-0004      Run ID code (ID)
+0002      Run ID code (ID)
 729       Number of days in simulation (nDays)
 123       Starting day of simulation as day of year (1-365) (startingDOY)
 1         Number of (nChannels)
@@ -8,13 +8,16 @@ User-specified parameters for TMAS model
 20        Length of (m) (length)
 20        Width of (m) (width)
 400       Convection area (m2) (areaConv) !!!!!!!!!!!!!!
-0         Solar area (m2)  (areaSol) !!!!!!!!!!11
+100       Solar area (m2)  (areaSol) !!!!!!!!!!11
+0.5       Effective absorptivity (-) (absorp)
 0         Initial volume of slurry (m3) (slurrryVol)
 0         Minimum daily average air temperature (degrees C) (minAnnTemp)
 21        Maximum daily average air temperature (degrees C) (maxAnnTemp)
-200       Hottest day of year (integer) (hottestDOY)
+180       Hottest day of year (also most radiation) (integer) (hottestDOY)
+100       Minimum daily average radiation (W/m2) (minAnnRad)
+250       Maximum daily average radiation (W/m2) (maxAnnRad)
 8.57      Slurry addition rate (tonnes/d) (slurryProd)
-30        Slurry temperature (deg. C) (tempIn) !!!!!!!!!!!!!!
+10        Slurry temperature (deg. C) (tempIn) !!!!!!!!!!!!!!
 122       Emptying DOY 1 (emptyDOY1) !!!!!!!!!!!!!!
 245       Emptying DOY 2 (emptyDOY2) !!!!!!!!!!!!!
 N         N = natural ventilation, H = mechanical ventilation with heating
