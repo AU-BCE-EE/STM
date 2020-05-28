@@ -72,7 +72,7 @@ PROGRAM stm
   REAL :: slurryProd     ! Slurry production rate (= inflow = outflow) (tonnes/d)
 
   ! Heat transfer coefficients and related variables
-  REAL :: kCAir          ! Convective heat transfer coefficient W/m2-K (J/s-m2-K) 
+  REAL :: uAir, uWall, uFloor          ! Convective heat transfer coefficient W/m2-K (J/s-m2-K) 
   REAL :: kSlur          ! Thermal conductivity of slurry in W/m-K
   REAL :: kConc          ! Thermal conductivity of concrete in W/m-K
   REAL :: cpConc         ! Heat capacity of concrete J/kg-K
@@ -88,7 +88,7 @@ PROGRAM stm
   REAL :: Qslur2air      ! To air
   REAL :: Qslur2wall     ! To wall
   REAL :: Qslur2floor    ! To floor
-  REAL :: Qslur2eff      ! To effluent (includes flow in)
+  !REAL :: Qslur2eff      ! To effluent (includes flow in)
   REAL :: Qout           ! Total
 
   ! Other parameters
@@ -110,7 +110,7 @@ PROGRAM stm
 
   ! Output files, name based on ID
   OPEN (UNIT=10,FILE='temp_pred_'//ID//'.txt',STATUS='UNKNOWN')
-  !OPEN (UNIT=11,FILE='dump'//ID//'.txt',STATUS='UNKNOWN')
+  OPEN (UNIT=11,FILE='rates'//ID//'.txt',STATUS='UNKNOWN')
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -142,7 +142,7 @@ PROGRAM stm
   ! Other parameters
   READ(2,*) 
   READ(2,*) tempInitial
-  READ(2,*) kCAir
+  READ(2,*) uAir
   READ(2,*) kSlur
   READ(2,*) kConc
   READ(2,*) cpConc
@@ -168,6 +168,10 @@ PROGRAM stm
 
   ! Substrate damping depth
   dampDepth = SQRT(2.*(kConc/(dConc*cpConc))*3600.*24./(2.*PI/365.))
+  
+  ! Heat transfer coefficients
+  uConc = 1./(glConc/kConc + glSlur/kSlur)
+  uWall = 1./(glConc/kConc + glSlur/kSlur)
 
   ! Determine airTemp, solRad, and substrate temperatures for a complete year
   ! Start day loop
@@ -290,30 +294,35 @@ PROGRAM stm
     DO HR = 1,24,1
     
       ! Calculate heat transfer rates, all in Watts (J/s)
-      ! WIP NTS set limit in input file
-      Qslur2air = kCAir*(tempSlurry - tempAir(DOY))*areaConv
-      Qslur2floor = 1./(glConc/kConc + glSlur/kSlur)*(tempSlurry - tempFloor(DOY))*areaFloor
-      Qslur2wall = 1./(glConc/kConc + glSlur/kSlur)*(tempSlurry - tempWall(DOY))*areaWall
+      Qslur2air = uAir*(tempSlurry - tempAir(DOY))*areaConv
+      Qslur2floor = uFloor*(tempSlurry - tempFloor(DOY))*areaFloor
+      Qslur2wall = uWall*(tempSlurry - tempWall(DOY))*areaWall
       Qout = Qrad + Qslur2air + Qslur2wall + Qslur2floor
-
-      ! Update slurry temperature
       dTemp = Qout*3600./(cpSlurry*massSlurry)
-
-      IF (dTemp < -0.1) THEN
-        dTemp = -0.1
-      ELSE IF (dTemp > 0.1) THEN
-        dTemp = 0.1
-      END IF 
+      
+      ! Steady-state temperature
+      tempSS = (uAir*tempAir*areaAir + uFloor*tempFloor*areaFloor + uWall*tempWall*areaWall - Qrad) / &
+        & (uAir*areaAir + uFloor*areaFloor + uWall*areaWall)
 
       tempSlurry = tempSlurry - dTemp
+      
+      ! Limit change in temperature to change to SS temp
+      IF (dTemp > 0 & tempSlurry > tempSS) THEN
+        tempSlurry = tempSS
+      ELSE IF (dTemp < 0 & tempSlurry < tempSS) THEN
+        tempSlurry = tempSS
+      END IF
+      
       sumTempSlurry = sumTempSlurry + tempSlurry
 
     END DO
 
 
-    WRITE(10,"(1X,I4,5X,I3,1X,7F7.1,5X,F15.1)") DOS, DOY, massSlurry, slurryDepth, tempAir(DOY), tempWall(DOY), tempFloor(DOY), &
-      & sumTempSlurry/24., Qout 
+    WRITE(10,"(1X,I4,5X,I3,1X,5F7.1)") DOS, DOY, massSlurry, slurryDepth, tempAir(DOY), tempWall(DOY), tempFloor(DOY), &
+      & sumTempSlurry/24. 
 
+    WRITE(11,"(1X,I4,5X,I3,1X,5F7.1)") DOS, DOY, Qrad, Qslur2air, Qslur2floor, Qslur2wall, Qout
+    
   END DO
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
