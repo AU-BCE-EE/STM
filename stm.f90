@@ -42,6 +42,7 @@ PROGRAM stm
   REAL :: minAnnTemp     ! Minimum daily average air temperature over the year
   REAL :: tempInitial    ! Initial slurry temperature
   REAL :: tempSlurry     ! Hourly or daily slurry temperature 
+  REAL :: tempSS         ! Steady-state slurry temperature
   REAL :: sumTempSlurry  ! Sum of hourly slurry temperatures for calculating daily mean
   REAL :: tempIn         ! Temperature of slurry when added to channel/pit
   REAL :: trigPartTemp   ! Sine part of temperature expression
@@ -54,8 +55,8 @@ PROGRAM stm
   REAL :: length, width  ! Length and width of channel/pit (m)
   REAL :: areaFloor      ! Channel or pit floor area (m2)
   REAL :: areaWall       ! Channel or pit wall area (m2)
-  REAL :: areaSurf       ! Slurry upper surface area (m2)
-  REAL :: areaConv       ! 
+  !REAL :: areaSurf       ! Slurry upper surface area (m2)
+  REAL :: areaAir        ! 
   INTEGER :: nChannels   ! Number of channels or pits
 
   ! Solar
@@ -109,8 +110,9 @@ PROGRAM stm
   READ(1,*) ID
 
   ! Output files, name based on ID
-  OPEN (UNIT=10,FILE='temp_pred_'//ID//'.txt',STATUS='UNKNOWN')
+  OPEN (UNIT=10,FILE='temp_'//ID//'.txt',STATUS='UNKNOWN')
   OPEN (UNIT=11,FILE='rates'//ID//'.txt',STATUS='UNKNOWN')
+  OPEN (UNIT=12,FILE='pars'//ID//'.txt',STATUS='UNKNOWN')
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -124,7 +126,7 @@ PROGRAM stm
   READ(1,*) buriedDepth
   READ(1,*) length
   READ(1,*) width
-  READ(1,*) areaConv
+  READ(1,*) areaAir
   READ(1,*) areaSol
   READ(1,*) absorp
   READ(1,*) slurryVol
@@ -155,6 +157,8 @@ PROGRAM stm
   ! Output file header
   WRITE(10,*) 'Day of  Day of  Slurry  Slurry  Air    Wall  Floor  Slurry'
   WRITE(10,*) 'sim.     year    mass   depth    T      T      T      T'
+  WRITE(11,*) 'Day of  Day of' 
+  WRITE(11,*) 'sim.     year         Qrad         Qslur2air     Qslur2floor      Qslur2wall       Qout' 
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Initial calculations
@@ -163,14 +167,14 @@ PROGRAM stm
   ! Calculate some geometry-related variables
   wallDepth = 0.5 * buriedDepth
   areaFloor = width*length*nChannels
-  areaSurf = width*length*nChannels
+  !areaSurf = width*length*nChannels
   massSlurry = slurryVol * dSlurry / 1000 ! Slurry mass is in tonnes = 1000 kg
 
   ! Substrate damping depth
   dampDepth = SQRT(2.*(kConc/(dConc*cpConc))*3600.*24./(2.*PI/365.))
   
   ! Heat transfer coefficients
-  uConc = 1./(glConc/kConc + glSlur/kSlur)
+  uFloor = 1./(glConc/kConc + glSlur/kSlur)
   uWall = 1./(glConc/kConc + glSlur/kSlur)
 
   ! Determine airTemp, solRad, and substrate temperatures for a complete year
@@ -225,6 +229,8 @@ PROGRAM stm
     DO DOY = 365 - wallAvePeriod + 2,365,1
       tempWall(1) = tempWall(1) + tempAir(DOY)/wallAvePeriod
     END DO
+
+    write(*,*) tempWall(1),wallAvePeriod
 
     DO DOY = 2,365,1
       IF (DOY > wallAvePeriod) THEN
@@ -294,22 +300,22 @@ PROGRAM stm
     DO HR = 1,24,1
     
       ! Calculate heat transfer rates, all in Watts (J/s)
-      Qslur2air = uAir*(tempSlurry - tempAir(DOY))*areaConv
+      Qslur2air = uAir*(tempSlurry - tempAir(DOY))*areaAir
       Qslur2floor = uFloor*(tempSlurry - tempFloor(DOY))*areaFloor
       Qslur2wall = uWall*(tempSlurry - tempWall(DOY))*areaWall
       Qout = Qrad + Qslur2air + Qslur2wall + Qslur2floor
-      dTemp = Qout*3600./(cpSlurry*massSlurry)
+      dTemp = - Qout*3600./(1000*cpSlurry*massSlurry)
       
       ! Steady-state temperature
-      tempSS = (uAir*tempAir*areaAir + uFloor*tempFloor*areaFloor + uWall*tempWall*areaWall - Qrad) / &
+      tempSS = (uAir*tempAir(DOY)*areaAir + uFloor*tempFloor(DOY)*areaFloor + uWall*tempWall(DOY)*areaWall - Qrad) / &
         & (uAir*areaAir + uFloor*areaFloor + uWall*areaWall)
 
-      tempSlurry = tempSlurry - dTemp
+      tempSlurry = tempSlurry + dTemp
       
       ! Limit change in temperature to change to SS temp
-      IF (dTemp > 0 & tempSlurry > tempSS) THEN
+      IF (dTemp > 0. .AND. tempSlurry > tempSS) THEN
         tempSlurry = tempSS
-      ELSE IF (dTemp < 0 & tempSlurry < tempSS) THEN
+      ELSEIF (dTemp < 0. .AND. tempSlurry < tempSS) THEN
         tempSlurry = tempSS
       END IF
       
@@ -318,10 +324,10 @@ PROGRAM stm
     END DO
 
 
-    WRITE(10,"(1X,I4,5X,I3,1X,5F7.1)") DOS, DOY, massSlurry, slurryDepth, tempAir(DOY), tempWall(DOY), tempFloor(DOY), &
+    WRITE(10,"(1X,I4,5X,I3,1X,6F7.1)") DOS, DOY, massSlurry, slurryDepth, tempAir(DOY), tempWall(DOY), tempFloor(DOY), &
       & sumTempSlurry/24. 
 
-    WRITE(11,"(1X,I4,5X,I3,1X,5F7.1)") DOS, DOY, Qrad, Qslur2air, Qslur2floor, Qslur2wall, Qout
+    WRITE(11,"(1X,I4,5X,I3,1X,5F15.0)") DOS, DOY, Qrad, Qslur2air, Qslur2floor, Qslur2wall, Qout
     
   END DO
 

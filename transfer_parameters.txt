@@ -1,12 +1,12 @@
 Transport-related parameters for TMAS model
 15        tempInitial
-100         kCAir
-0.6       kSlur
-1         kConc
-1000      cpConc
+10        uAir (W/m2-K)
+0.6       kSlur (W/m-K)
+1         kConc (W/m-K)
+1000      cpConc (J/kg-K)
 4200      cpSlurry (J/kg-K)
-2300      dConc
+2300      dConc (kg/m3)
 1000      dSlurry (kg/m3)
-0.1       glConc
-0.03      glSlur
+0.1       glConc (m)
+0.1       glSlur (m)
 
