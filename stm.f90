@@ -128,7 +128,6 @@ PROGRAM stm
   READ(1,*) width
   READ(1,*) areaAir
   READ(1,*) areaSol
-  READ(1,*) absorp
   READ(1,*) slurryVol
   READ(1,*) tempInitial
   READ(1,*) minAnnTemp
@@ -140,7 +139,7 @@ PROGRAM stm
   READ(1,*) tempIn
   READ(1,*) emptyDOY1
   READ(1,*) emptyDOY2 
-  READ(1,*) ventType
+  !!!READ(1,*) ventType
 
   ! Other parameters
   READ(2,*) 
@@ -153,6 +152,7 @@ PROGRAM stm
   READ(2,*) dSlurry
   READ(2,*) glConc
   READ(2,*) glSlur
+  READ(2,*) absorp
 
   ! Output file header
   WRITE(10,*) 'Day of  Day of  Slurry  Slurry  Air    Wall  Floor  Slurry'
@@ -230,8 +230,6 @@ PROGRAM stm
       tempWall(1) = tempWall(1) + tempAir(DOY)/wallAvePeriod
     END DO
 
-    write(*,*) tempWall(1),wallAvePeriod
-
     DO DOY = 2,365,1
       IF (DOY > wallAvePeriod) THEN
         tempWall(DOY) = tempWall(DOY - 1) - tempAir(DOY - wallAvePeriod)/wallAvePeriod + tempAir(DOY)/wallAvePeriod
@@ -295,7 +293,7 @@ PROGRAM stm
     sumTempSlurry = 0
 
     ! Radiation fixed for day (W = J/s)
-    Qrad = - solRad(DOY) * areaSol
+    Qrad = - absorp * solRad(DOY) * areaSol
 
     DO HR = 1,24,1
     
