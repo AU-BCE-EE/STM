@@ -130,6 +130,7 @@ PROGRAM stm
   READ(1,*) areaSol
   READ(1,*) absorp
   READ(1,*) slurryVol
+  READ(1,*) tempInitial
   READ(1,*) minAnnTemp
   READ(1,*) maxAnnTemp 
   READ(1,*) hottestDOY
@@ -143,7 +144,6 @@ PROGRAM stm
 
   ! Other parameters
   READ(2,*) 
-  READ(2,*) tempInitial
   READ(2,*) uAir
   READ(2,*) kSlur
   READ(2,*) kConc

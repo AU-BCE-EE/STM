@@ -11,6 +11,7 @@ User-specified parameters for TMAS model
 100       Effective solar (normal) area (m2)  (areaSol)
 0.3       Effective absorptivity (-) (absorp)
 0         Initial volume of slurry (m3) (slurrryVol)
+15        Initial slurry temperature (tempInitial)
 0         Minimum daily average air temperature (degrees C) (minAnnTemp)
 21        Maximum daily average air temperature (degrees C) (maxAnnTemp)
 180       Hottest day of year (also most radiation) (integer) (hottestDOY)

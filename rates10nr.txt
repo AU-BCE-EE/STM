@@ -1,3 +1,0 @@
- Day of  Day of
- sim.     year         Qrad         Qslur2air     Qslur2floor      Qslur2wall       Qout
-    1     123             -0.         -8388.          8332.            57.            -0.
