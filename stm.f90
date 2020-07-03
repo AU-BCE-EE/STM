@@ -31,7 +31,11 @@ PROGRAM stm
 
   ! Simulation ID
   CHARACTER (LEN=4) :: ID ! ID code of simulation
-  CHARACTER (LEN=1) :: ventType ! Type of ventilation
+  !!CHARACTER (LEN=1) :: ventType ! Type of ventilation
+
+  ! File names
+  CHARACTER (LEN=25) :: userParFile, parFile
+  INTEGER :: numArgs
 
   ! Temperatures, all in degrees C
   REAL, DIMENSION(365) :: tempAir, tempFloor, tempWall ! Air, floor (bottom of channel or pit), and wall (side of channel or pit)
@@ -96,29 +100,41 @@ PROGRAM stm
   REAL, PARAMETER :: PI = 3.1415927
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Get file names from call
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  numArgs = COMMAND_ARGUMENT_COUNT()
+  IF (numArgs .NE. 3) THEN
+    WRITE(*,*) 'Model accepts either 3 or no par files so will use default names'
+    parFile = 'pars.txt'
+    userParFile = 'user_pars.txt'
+    ID = '01'
+  ELSE
+    CALL GET_COMMAND_ARGUMENT(1, ID)
+    CALL GET_COMMAND_ARGUMENT(2, parFile)
+    CALL GET_COMMAND_ARGUMENT(3, userParFile)
+  END IF
+
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Open files
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Input files
-  OPEN (UNIT=1,FILE='user_parameters.txt',STATUS='OLD')
-  OPEN (UNIT=2,FILE='transfer_parameters.txt',STATUS='OLD')
-  OPEN (UNIT=3,FILE='target_temp.txt',STATUS='OLD')
-
-  ! Read in simulation ID
-  READ(1,*)
-  READ(1,*) ID
+  OPEN (UNIT=1, FILE=userParFile, STATUS='OLD')
+  OPEN (UNIT=2, FILE=parFile, STATUS='OLD')
+  !!!OPEN (UNIT=3, FILE='target_temp.txt', STATUS='OLD')
 
   ! Output files, name based on ID
   OPEN (UNIT=10,FILE='temp_'//ID//'.txt',STATUS='UNKNOWN')
   OPEN (UNIT=11,FILE='rates'//ID//'.txt',STATUS='UNKNOWN')
-  OPEN (UNIT=12,FILE='pars'//ID//'.txt',STATUS='UNKNOWN')
+  !OPEN (UNIT=12,FILE='pars'//ID//'.txt',STATUS='UNKNOWN')
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Read parameters
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! User parameters
+  READ(1,*)
   READ(1,*) nDays
   READ(1,*) startingDOY
   READ(1,*) nChannels
@@ -188,29 +204,29 @@ PROGRAM stm
     solRad(DOY) = trigPartRad + (minAnnRad + maxAnnRad)/2.
   END DO
 
-  ! If heated, correct air temperature if it is colder than target 
-  ! Skip header
-  READ(3,*) 
-  IF (ventType == 'H') THEN
+  !!!! If heated, correct air temperature if it is colder than target 
+  !!!IF (ventType == 'H') THEN
 
-    READ(3,*) targetDOY,tempTarget
-    READ(3,*) nextTargetDOY,nextTempTarget
+  !!!  ! Skip header
+  !!!  READ(3,*) 
+  !!!  READ(3,*) targetDOY,tempTarget
+  !!!  READ(3,*) nextTargetDOY,nextTempTarget
 
-    DO DOY = 1,365,1
+  !!!  DO DOY = 1,365,1
 
-      IF (DOY >= nextTargetDOY) THEN
-        tempTarget = nextTempTarget
-        IF (.NOT. IS_IOSTAT_END(fileStat)) THEN
-          READ(3,*,IOSTAT=fileStat) nextTargetDOY,nextTempTarget
-        ELSE
-          nextTargetDOY = 366
-        END IF
-      END IF
-      
-      tempAir(DOY) = MAX(tempAir(DOY),tempTarget)
+  !!!    IF (DOY >= nextTargetDOY) THEN
+  !!!      tempTarget = nextTempTarget
+  !!!      IF (.NOT. IS_IOSTAT_END(fileStat)) THEN
+  !!!        READ(3,*,IOSTAT=fileStat) nextTargetDOY,nextTempTarget
+  !!!      ELSE
+  !!!        nextTargetDOY = 366
+  !!!      END IF
+  !!!    END IF
+  !!!    
+  !!!    tempAir(DOY) = MAX(tempAir(DOY),tempTarget)
 
-    END DO
-  END IF
+  !!!  END DO
+  !!!END IF
 
   ! Substrate temperature based on moving average
   ! NTS: how about aveperiods > 365?

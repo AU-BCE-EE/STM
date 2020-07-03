@@ -1,15 +1,13 @@
 User-specified parameters for TMAS model
-10cc      Run ID code (ID)
-729       Number of days in simulation (nDays)
+375       Number of days in simulation (nDays)
 123       Starting day of simulation as day of year (1-365) (startingDOY)
-1         Number of (nChannels)
-5         Depth of (m) (channelDepth)
+1         Number of tanks (nChannels)
+5         Total depth (m) (channelDepth)
 2.5       Buried depth (to bottom) (m) (buriedDepth)
 20        Length of tank (m) (length)
 20        Width of tank (m) (width)
 400       Effective slurry-to-air convection area (m2) (areaAir)
-100       Effective solar (normal) area (m2)  (areaSol)
-0.3       Effective absorptivity (-) (absorp)
+390       Effective solar (normal) area (m2)  (areaSol)
 0         Initial volume of slurry (m3) (slurrryVol)
 15        Initial slurry temperature (tempInitial)
 0         Minimum daily average air temperature (degrees C) (minAnnTemp)
@@ -21,5 +19,3 @@ User-specified parameters for TMAS model
 10        Slurry temperature (deg. C) (tempIn)
 122       Emptying DOY 1 (emptyDOY1)
 245       Emptying DOY 2 (emptyDOY2)
-N         N = natural ventilation, H = mechanical ventilation with heating
-          H option requires a separate file target_temp.txt. See example.
