@@ -1,5 +1,4 @@
-User-specified parameters for TMAS model
-0001      Run ID code (ID)
+User-specified parameters for STM model
 729       Number of days in simulation (nDays)
 123       Starting day of simulation as day of year (1-365) (startingDOY)
 1         Number of tanks (nChannels)
