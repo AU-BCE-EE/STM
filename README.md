@@ -10,4 +10,4 @@ For example
 ./a.out 10Cn pars.txt user_pars.txt
 
 # Inputs
-Set inputs in user_pars.txt
+Set inputs in user_pars.txt. Help on calculating parameter values in par_calc directory.
