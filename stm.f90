@@ -125,8 +125,8 @@ PROGRAM stm
   !!!OPEN (UNIT=3, FILE='target_temp.txt', STATUS='OLD')
 
   ! Output files, name based on ID
-  OPEN (UNIT=10,FILE=TRIM(ADJUSTL('temp_'//ID//'.txt')),STATUS='UNKNOWN')
-  OPEN (UNIT=11,FILE=TRIM(ADJUSTL('rates'//ID//'.txt')),STATUS='UNKNOWN')
+  OPEN (UNIT=10,FILE=('temp_'//ID//'.txt'),STATUS='UNKNOWN')
+  OPEN (UNIT=11,FILE=('rates'//ID//'.txt'),STATUS='UNKNOWN')
   !OPEN (UNIT=12,FILE='pars'//ID//'.txt',STATUS='UNKNOWN')
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   
@@ -192,6 +192,9 @@ PROGRAM stm
   ! Heat transfer coefficients
   uFloor = 1./(glConc/kConc + glSlur/kSlur)
   uWall = 1./(glConc/kConc + glSlur/kSlur)
+
+  ! Adjust u for air by gl in slurry
+  uAir = 1./(1/uAir + glSlur/kSlur)
 
   ! Determine airTemp, solRad, and substrate temperatures for a complete year
   ! Start day loop
