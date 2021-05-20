@@ -125,8 +125,8 @@ PROGRAM stm
   !!!OPEN (UNIT=3, FILE='target_temp.txt', STATUS='OLD')
 
   ! Output files, name based on ID
-  OPEN (UNIT=10,FILE='temp_'//ID//'.txt',STATUS='UNKNOWN')
-  OPEN (UNIT=11,FILE='rates'//ID//'.txt',STATUS='UNKNOWN')
+  OPEN (UNIT=10,FILE=TRIM(ADJUSTL('temp_'//ID//'.txt')),STATUS='UNKNOWN')
+  OPEN (UNIT=11,FILE=TRIM(ADJUSTL('rates'//ID//'.txt')),STATUS='UNKNOWN')
   !OPEN (UNIT=12,FILE='pars'//ID//'.txt',STATUS='UNKNOWN')
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   
