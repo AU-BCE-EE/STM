@@ -24,6 +24,7 @@ PROGRAM stm
   INTEGER :: nDays       ! Number of days in simulation
   INTEGER :: startingDOY ! Starting day of year
   INTEGER :: hottestDOY  ! Hottest day of year
+  INTEGER :: raddestDOY  ! Day of year with most radiation
   INTEGER :: emptyDOY1   ! 
   INTEGER :: emptyDOY2   ! 
   INTEGER :: wallAvePeriod, floorAvePeriod ! Number of days in running averages for wall and floor temperature
@@ -151,6 +152,7 @@ PROGRAM stm
   READ(1,*) hottestDOY
   READ(1,*) minAnnRad
   READ(1,*) maxAnnRad 
+  READ(1,*) raddestDOY
   READ(1,*) slurryProd
   READ(1,*) tempIn
   READ(1,*) emptyDOY1
@@ -203,7 +205,7 @@ PROGRAM stm
     trigPartTemp = (maxAnnTemp - minAnnTemp)*SIN((DOY - hottestDOY)*2*PI/365. + 0.5*PI)/2.
     tempAir(DOY) = trigPartTemp + (minAnnTemp + maxAnnTemp)/2.
 
-    trigPartRad = (maxAnnRad - minAnnRad)*SIN((DOY - hottestDOY)*2*PI/365. + 0.5*PI)/2.
+    trigPartRad = (maxAnnRad - minAnnRad)*SIN((DOY - raddestDOY)*2*PI/365. + 0.5*PI)/2.
     solRad(DOY) = trigPartRad + (minAnnRad + maxAnnRad)/2.
   END DO
 
