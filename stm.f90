@@ -51,6 +51,7 @@ PROGRAM stm
   REAL :: sumTempSlurry  ! Sum of hourly slurry temperatures for calculating daily mean
   REAL :: tempIn         ! Temperature of slurry when added to channel/pit
   REAL :: trigPartTemp   ! Sine part of temperature expression
+  REAL :: residMass      ! Mass of slurry left behind when emptying
 
   ! Geometry of channel or pit
   REAL :: slurryDepth    ! Depth of slurry in channel/pit (m)
@@ -154,6 +155,7 @@ PROGRAM stm
   READ(1,*) maxAnnRad 
   READ(1,*) raddestDOY
   READ(1,*) slurryProd
+  READ(1,*) residMass
   READ(1,*) tempIn
   READ(1,*) emptyDOY1
   READ(1,*) emptyDOY2 
@@ -299,7 +301,7 @@ PROGRAM stm
 
     ! Empty and add slurry at beginning of day
     IF (DOY == emptyDOY1 .OR. DOY == emptyDOY2) THEN
-      massSlurry = 0
+      massSlurry = residMass
     END IF
 
     ! Update slurry mass and temperature from addition

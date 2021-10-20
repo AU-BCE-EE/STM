@@ -17,6 +17,7 @@ User-specified parameters for STM model
 250       Maximum daily average radiation (W/m2) (maxAnnRad)
 170       Day of year with most radiation (integer) (raddestDOY)
 8.57      Slurry addition rate (tonnes/d) (slurryProd)
+10        Residual slurry mass left when emptying (tonnes or m3) (residMass)
 10        Slurry temperature (deg. C) (tempIn)
 122       Emptying DOY 1 (emptyDOY1)
 245       Emptying DOY 2 (emptyDOY2)
