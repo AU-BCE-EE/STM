@@ -128,7 +128,8 @@ PROGRAM stm
 
   ! Output files, name based on ID
   OPEN (UNIT=10,FILE=('temp_'//ID//'.txt'),STATUS='UNKNOWN')
-  OPEN (UNIT=11,FILE=('rates'//ID//'.txt'),STATUS='UNKNOWN')
+  OPEN (UNIT=11,FILE=('rates_'//ID//'.txt'),STATUS='UNKNOWN')
+  OPEN (UNIT=12,FILE=('weather_'//ID//'.txt'),STATUS='UNKNOWN')
   !OPEN (UNIT=12,FILE='pars'//ID//'.txt',STATUS='UNKNOWN')
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   
@@ -179,6 +180,8 @@ PROGRAM stm
   WRITE(10,*) 'sim.     year    mass   depth    T      T      T      T'
   WRITE(11,*) 'Day of  Day of' 
   WRITE(11,*) 'sim.     year         Qrad         Qslur2air     Qslur2floor      Qslur2wall       Qout' 
+  WRITE(12,*) 'Day of  Day of  Air   Radiation'
+  WRITE(12,*) 'sim.     year    T'
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Initial calculations
@@ -209,6 +212,9 @@ PROGRAM stm
 
     trigPartRad = (maxAnnRad - minAnnRad)*SIN((DOY - raddestDOY)*2*PI/365. + 0.5*PI)/2.
     solRad(DOY) = trigPartRad + (minAnnRad + maxAnnRad)/2.
+    IF (solRad(DOY) < 0) THEN
+      solRad(DOY) = 0
+    END IF
   END DO
 
   !!!! If heated, correct air temperature if it is colder than target 
@@ -345,10 +351,12 @@ PROGRAM stm
     END DO
 
 
-    WRITE(10,"(1X,I4,5X,I3,1X,6F7.1)") DOS, DOY, massSlurry, slurryDepth, tempAir(DOY), tempWall(DOY), tempFloor(DOY), &
+    WRITE(10,"(1X,I4,5X,I3,1X,6F8.2)") DOS, DOY, massSlurry, slurryDepth, tempAir(DOY), tempWall(DOY), tempFloor(DOY), &
       & sumTempSlurry/24. 
 
     WRITE(11,"(1X,I4,5X,I3,1X,5F15.0)") DOS, DOY, Qrad, Qslur2air, Qslur2floor, Qslur2wall, Qout
+
+    WRITE(12,"(1X,I4,5X,I3,1X,2F15.0)") DOS, DOY, tempAir(DOY), solRad(DOY)
     
   END DO
 
