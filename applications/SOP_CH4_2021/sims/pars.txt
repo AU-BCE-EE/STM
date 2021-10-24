@@ -7,6 +7,6 @@ Transport-related parameters for STM model
 2300      dConc (kg/m3)
 1000      dSlurry (kg/m3)
 0.25      glConc (m)
-0.30      glSlur (m)
-0.10      absorp (-)
+0.40      glSlur (m)
+0.03      absorp (-)
 

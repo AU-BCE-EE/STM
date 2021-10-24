@@ -18,6 +18,7 @@ PROGRAM stm
   ! Days, and other integers
   INTEGER :: HR          ! Hour of day (1-24)
   INTEGER :: DOY         ! Day of year (1 - 365)
+  INTEGER :: YR          ! Relative year (1 + )
   INTEGER :: targetDOY   ! Day of year in target_temp.txt file
   INTEGER :: nextTargetDOY   ! Day of year in target_temp.txt file
   INTEGER :: DOS         ! Day of simulation
@@ -176,12 +177,12 @@ PROGRAM stm
   READ(2,*) absorp
 
   ! Output file header
-  WRITE(10,*) 'Day of  Day of  Slurry  Slurry  Air    Wall  Floor  Slurry'
-  WRITE(10,*) 'sim.     year    mass   depth    T      T      T      T'
-  WRITE(11,*) 'Day of  Day of' 
-  WRITE(11,*) 'sim.     year         Qrad         Qslur2air     Qslur2floor      Qslur2wall       Qout' 
-  WRITE(12,*) 'Day of  Day of  Air   Radiation'
-  WRITE(12,*) 'sim.     year    T'
+  WRITE(10,*) 'Day of  Day of Year Slurry  Slurry  Air    Wall  Floor  Slurry'
+  WRITE(10,*) 'sim.     year        mass   depth    T      T      T      T'
+  WRITE(11,*) 'Day of  Day of Year ' 
+  WRITE(11,*) 'sim.     year               Qrad         Qslur2air     Qslur2floor      Qslur2wall       Qout' 
+  WRITE(12,*) 'Day of  Day of Year Air   Radiation'
+  WRITE(12,*) 'sim.     year        T'
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Initial calculations
@@ -298,11 +299,13 @@ PROGRAM stm
 
   ! Start main day loop
   DOY = startingDOY - 1
+  YR = 1
   DO DOS = 1,nDays,1
 
     DOY = DOY + 1
     IF (DOY == 366) THEN
       DOY = 1
+      YR = YR + 1
     END IF
 
     ! Empty and add slurry at beginning of day
@@ -351,12 +354,12 @@ PROGRAM stm
     END DO
 
 
-    WRITE(10,"(1X,I4,5X,I3,1X,6F8.2)") DOS, DOY, massSlurry, slurryDepth, tempAir(DOY), tempWall(DOY), tempFloor(DOY), &
+    WRITE(10,"(1X,I4,5X,I3,5X,I4,1X,6F8.2)") DOS, DOY, YR, massSlurry, slurryDepth, tempAir(DOY), tempWall(DOY), tempFloor(DOY), &
       & sumTempSlurry/24. 
 
-    WRITE(11,"(1X,I4,5X,I3,1X,5F15.0)") DOS, DOY, Qrad, Qslur2air, Qslur2floor, Qslur2wall, Qout
+    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,5F15.0)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2wall, Qout
 
-    WRITE(12,"(1X,I4,5X,I3,1X,2F15.0)") DOS, DOY, tempAir(DOY), solRad(DOY)
+    WRITE(12,"(1X,I4,5X,I3,5X,I4,1X,2F15.0)") DOS, DOY, YR, tempAir(DOY), solRad(DOY)
     
   END DO
 
