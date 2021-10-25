@@ -1,5 +1,5 @@
 Transport-related parameters for STM model
-100       uAir (W/m2-K)
+50        uAir (W/m2-K)
 0.6       kSlur (W/m-K)
 1.0       kConc (W/m-K)
 1000      cpConc (J/kg-K)
@@ -7,6 +7,5 @@ Transport-related parameters for STM model
 2300      dConc (kg/m3)
 1000      dSlurry (kg/m3)
 0.25      glConc (m)
-0.40      glSlur (m)
-0.03      absorp (-)
-
+0.20      glSlur (m)
+0.07      absorp (-) 
