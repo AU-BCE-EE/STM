@@ -1,15 +1,18 @@
 # STM
-Simple heat transfer model for predicting slurry (manure) temperature during storage in a tank.
+Simple heat transfer model for predicting slurry (animal manure with < about 15% dry matter) temperature during storage in an outdoor tank.
 
 # Usage
-If compiled to a.out, then:
-a.out <ID  > <par_file_name> <user_par_file_name>
+If compiled to stm, then:
+stm <IDxx> <par_file_name> <user_par_file_name>
 
 For example:
 
-./a.out 10Cn pars.txt user_pars.txt
+./stm 10Cn pars.txt user_pars.txt
 
-ID is a 4 character run ID code.
+IDxx is a 4 character run ID code.
 
 # Inputs
-Set inputs in user_pars.txt. Help on calculating parameter values in par_calc directory.
+Set inputs in user_pars.txt. Help on calculating parameter values can be found in the par_calc directory. The pars.txt file has parameters directly related to heat transfer and storage, including heat capacity and convection coefficients. Ideally these values would not be regularly changed, but determination of the values of some is challenging.
+  
+# Outputs
+Files are created for temperature, weather, and heat transfer rates. See application directories for examples.
