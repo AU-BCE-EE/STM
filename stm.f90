@@ -128,9 +128,9 @@ PROGRAM stm
   !!!OPEN (UNIT=3, FILE='target_temp.txt', STATUS='OLD')
 
   ! Output files, name based on ID
-  OPEN (UNIT=10,FILE=('temp_'//ID//'.txt'),STATUS='UNKNOWN')
-  OPEN (UNIT=11,FILE=('rates_'//ID//'.txt'),STATUS='UNKNOWN')
-  OPEN (UNIT=12,FILE=('weather_'//ID//'.txt'),STATUS='UNKNOWN')
+  OPEN (UNIT=10,FILE=(''//ID//'_temp.txt'),STATUS='UNKNOWN')
+  OPEN (UNIT=11,FILE=(''//ID//'_rates.txt'),STATUS='UNKNOWN')
+  OPEN (UNIT=12,FILE=(''//ID//'_weather.txt'),STATUS='UNKNOWN')
   !OPEN (UNIT=12,FILE='pars'//ID//'.txt',STATUS='UNKNOWN')
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   
