@@ -13,6 +13,9 @@ dat$height <- paste(dat$height, ' m')
 dat$site <- substr(dat$site, 1, 4)
 dat$site[dat$site == 'Rånä'] <- 'Raan'
 
+# Average temperature
+dm <- aggregate(temp ~ site + date, data = dat, FUN = mean)
+
 # Model results
 mod <- data.frame()
 ff <- list.files('stm_output', pattern = 'temp.txt')
@@ -29,7 +32,17 @@ mod$date <- as.POSIXct(paste(mod$year, mod$doy), format = '%Y %j')
 
 # Add in model predictions by date
 dat <- merge(dat, mod, by = c('site', 'date'), all = FALSE)
+dm <- merge(dm, mod, by = c('site', 'date'), all = FALSE)
 
+ggplot(dm, aes(date, temp)) +
+  geom_line(col = 'red') +
+  geom_line(aes(date, temp.slurry), colour = 'black') +
+  geom_line(aes(date, temp.air), colour = 'skyblue', lty = 2) +
+  facet_wrap(~ site) +
+  labs(x = 'Date', y = expression('Temperature'~(degree*C)), 
+       colour = 'Position (from surface)') +
+  theme(legend.position = 'top')
+ggsave('plots/ave_stor_temp_4.png', height = 6, width = 8)
 
 ggplot(dat, aes(date.time, temp, colour = factor(height))) +
   geom_line() +
