@@ -87,7 +87,6 @@ PROGRAM stm
   REAL :: cpSlurry       ! Heat capacity of slurry J/kg-K
   REAL :: dConc          ! Density of concrete kg/m3
   REAL :: dSlurry        ! Density of slurry kg/m3
-  REAL :: dampDepth      ! Damping depth for soil model in m
   REAL :: glConc         ! Gradient length within concrete substrate in m
   REAL :: glSlur         ! Gradient length within slurry in m
 
