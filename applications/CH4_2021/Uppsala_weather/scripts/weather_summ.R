@@ -1,3 +1,4 @@
+# Simplify Uppsala weather data a bit
 
 library(lubridate)
 source('wsine.R')
