@@ -36,7 +36,7 @@ PROGRAM stm
   !!CHARACTER (LEN=1) :: ventType ! Type of ventilation
 
   ! File names
-  CHARACTER (LEN=25) :: userParFile, parFile
+  CHARACTER (LEN=25) :: userParFile, parFile, weatherFile
   INTEGER :: numArgs
 
   ! Temperatures, all in degrees C
@@ -98,6 +98,8 @@ PROGRAM stm
   !REAL :: Qslur2eff      ! To effluent (includes flow in)
   REAL :: Qout           ! Total
 
+  LOGICAL :: calcWeather ! .TRUE. when weather inputs are calculated (otherwise read from file)
+
   ! Other parameters
   REAL, PARAMETER :: PI = 3.1415927
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -106,15 +108,23 @@ PROGRAM stm
   ! Get file names from call
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   numArgs = COMMAND_ARGUMENT_COUNT()
-  IF (numArgs .NE. 3) THEN
-    WRITE(*,*) 'Model accepts either 3 or no par files so will use default names'
-    parFile = 'pars.txt'
-    userParFile = 'user_pars.txt'
-    ID = '01'
-  ELSE
+  IF (numArgs .EQ. 3) THEN
     CALL GET_COMMAND_ARGUMENT(1, ID)
     CALL GET_COMMAND_ARGUMENT(2, parFile)
     CALL GET_COMMAND_ARGUMENT(3, userParFile)
+    calcWeather = .TRUE.
+  ELSE IF (numArgs .EQ. 4) THEN
+    CALL GET_COMMAND_ARGUMENT(1, ID)
+    CALL GET_COMMAND_ARGUMENT(2, parFile)
+    CALL GET_COMMAND_ARGUMENT(3, userParFile)
+    CALL GET_COMMAND_ARGUMENT(4, weatherFile)
+    calcWeather = .FALSE.
+  ELSE
+    WRITE(*,*) 'No file names given so 2 default parameter files will be used, with calculated weather.'
+    parFile = 'pars.txt'
+    userParFile = 'user_pars.txt'
+    ID = '01'
+    calcWeather = .FALSE.
   END IF
 
 
@@ -124,6 +134,9 @@ PROGRAM stm
   ! Input files
   OPEN (UNIT=1, FILE=userParFile, STATUS='OLD')
   OPEN (UNIT=2, FILE=parFile, STATUS='OLD')
+  IF (.NOT. calcWeather) THEN
+    OPEN (UNIT=3, FILE=weatherFile, STATUS='UNKNOWN')
+  END IF
   !!!OPEN (UNIT=3, FILE='target_temp.txt', STATUS='OLD')
 
   ! Output files, name based on ID
@@ -202,17 +215,27 @@ PROGRAM stm
 
   ! Determine airTemp, solRad, and substrate temperatures for a complete year
   ! Start day loop
-  DO DOY = 1,365,1
-    ! Use sine curve to determine air temp
-    trigPartTemp = (maxAnnTemp - minAnnTemp)*SIN((DOY - hottestDOY)*2*PI/365. + 0.5*PI)/2.
-    tempAir(DOY) = trigPartTemp + (minAnnTemp + maxAnnTemp)/2.
+  IF (calcWeather) THEN
+    DO DOY = 1,365,1
+      ! Use sine curve to determine air temp
+      trigPartTemp = (maxAnnTemp - minAnnTemp)*SIN((DOY - hottestDOY)*2*PI/365. + 0.5*PI)/2.
+      tempAir(DOY) = trigPartTemp + (minAnnTemp + maxAnnTemp)/2.
 
-    trigPartRad = (maxAnnRad - minAnnRad)*SIN((DOY - raddestDOY)*2*PI/365. + 0.5*PI)/2.
-    solRad(DOY) = trigPartRad + (minAnnRad + maxAnnRad)/2.
-    IF (solRad(DOY) < 0) THEN
-      solRad(DOY) = 0
-    END IF
-  END DO
+      trigPartRad = (maxAnnRad - minAnnRad)*SIN((DOY - raddestDOY)*2*PI/365. + 0.5*PI)/2.
+      solRad(DOY) = trigPartRad + (minAnnRad + maxAnnRad)/2.
+      IF (solRad(DOY) < 0) THEN
+        solRad(DOY) = 0
+      END IF
+    END DO
+  ELSE 
+    ! Skip header
+    READ(3,*)
+    DO WHILE (.NOT. IS_IOSTAT_END(fileStat))
+      READ(3,*,IOSTAT=fileStat) DOY, tempAir(DOY), solRad(DOY)
+    END DO
+  END IF
+  !!!      IF (.NOT. IS_IOSTAT_END(fileStat)) THEN
+  !!!        READ(3,*,IOSTAT=fileStat) nextTargetDOY,nextTempTarget
 
   !!!! If heated, correct air temperature if it is colder than target 
   !!!IF (ventType == 'H') THEN
