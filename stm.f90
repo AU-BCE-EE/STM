@@ -234,32 +234,6 @@ PROGRAM stm
       READ(3,*,IOSTAT=fileStat) DOY, tempAir(DOY), solRad(DOY)
     END DO
   END IF
-  !!!      IF (.NOT. IS_IOSTAT_END(fileStat)) THEN
-  !!!        READ(3,*,IOSTAT=fileStat) nextTargetDOY,nextTempTarget
-
-  !!!! If heated, correct air temperature if it is colder than target 
-  !!!IF (ventType == 'H') THEN
-
-  !!!  ! Skip header
-  !!!  READ(3,*) 
-  !!!  READ(3,*) targetDOY,tempTarget
-  !!!  READ(3,*) nextTargetDOY,nextTempTarget
-
-  !!!  DO DOY = 1,365,1
-
-  !!!    IF (DOY >= nextTargetDOY) THEN
-  !!!      tempTarget = nextTempTarget
-  !!!      IF (.NOT. IS_IOSTAT_END(fileStat)) THEN
-  !!!        READ(3,*,IOSTAT=fileStat) nextTargetDOY,nextTempTarget
-  !!!      ELSE
-  !!!        nextTargetDOY = 366
-  !!!      END IF
-  !!!    END IF
-  !!!    
-  !!!    tempAir(DOY) = MAX(tempAir(DOY),tempTarget)
-
-  !!!  END DO
-  !!!END IF
 
   ! Substrate temperature based on moving average
   ! NTS: how about aveperiods > 365?
