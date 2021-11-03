@@ -194,9 +194,6 @@ PROGRAM stm
   !areaSurf = width*length*nChannels
   massSlurry = slurryVol * dSlurry / 1000 ! Slurry mass is in tonnes = 1000 kg
 
-  ! Substrate damping depth
-  dampDepth = SQRT(2.*(kConc/(dConc*cpConc))*3600.*24./(2.*PI/365.))
-  
   ! Heat transfer coefficients
   uFloor = 1./(glConc/kConc + glSlur/kSlur)
   uWall = 1./(glConc/kConc + glSlur/kSlur)
