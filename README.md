@@ -3,7 +3,13 @@ Simple heat transfer model for predicting the temperature of animal slurry (anim
 Earlier versions were focused on indoor channels.
 
 # Usage
-If compiled to stm, then:
+The model code is in `stm.f90`.
+On Linux with the f95 compiler, it can be compiled with the following command.
+
+```
+gfortran stm.f90 -o stm
+```
+If compiled to `stm` (as from above command), then:
 stm <IDxx> <par_file_name> <user_par_file_name> <weather_file_name>
 
 IDxx is a 4 character run ID code.
@@ -62,7 +68,7 @@ Radiation, taken as the product of solar radiation and slurry surface emissivity
 ## Numerical solution
 A simple first-order fixed time step approach is used.
 The time step is one hour, although weather is taken as constant over each day.
-To avoid numerical instability (probably only a problem when slurry mass (depth) is very low, a steady-state temperature is calculated at each time step, and taken as the slurry temperature if rate calculations suggest that the slurry temperature should surpass the steady-state value.
+To avoid numerical instability (probably only a problem when slurry mass (depth) is very low), a steady-state temperature is calculated at each time step, and taken as the slurry temperature if rate calculations suggest that the slurry temperature should surpass the steady-state value.
 
 ## Freezing
 Freezing and thawing are included, mainly to capture the behavior of slurry around a temperature of 0 degrees C.
