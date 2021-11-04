@@ -4,7 +4,7 @@ Earlier versions were focused on indoor channels.
 
 # Usage
 The model code is in `stm.f90`.
-On Linux with the f95 compiler, it can be compiled with the following command.
+On Linux with the GNU Fortran 95 compiler, it can be compiled with the following command.
 
 ```
 gfortran stm.f90 -o stm
