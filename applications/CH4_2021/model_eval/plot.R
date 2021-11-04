@@ -35,6 +35,17 @@ mod$date <- as.POSIXct(paste(mod$year, mod$doy), format = '%Y %j')
 dat <- merge(dat, mod, by = c('site', 'date'), all = FALSE)
 dm <- merge(dm, mod, by = c('site', 'date'), all = FALSE)
 
+dm$group <- 'A'
+dm$group[dm$site %in% c('Back', 'Fitt')] <- 'B'
+
+ggplot(dm, aes(date, temp, colour = site)) +
+  geom_line(lty = 1) +
+  geom_line(aes(date, temp.slurry), lty = 3) +
+  labs(x = 'Date', y = expression('Temperature'~(degree*C)), 
+       colour = 'Position (from surface)') +
+  theme(legend.position = 'top')
+ggsave('plots/ave_stor_temp.png', height = 6, width = 8)
+
 ggplot(dm, aes(date, temp)) +
   geom_line(col = 'red') +
   geom_line(aes(date, temp.slurry), colour = 'black') +
