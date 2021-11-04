@@ -75,7 +75,7 @@ PROGRAM stm
   REAL :: trigPartRad    ! Sine part of radiation expression
   
   ! Other slurry variables
-  REAL :: massSlurry     ! Total slurry mass (kg)
+  REAL :: massSlurry, massFrozen = 0, dmassFrozen   ! Slurry mass (kg) NTS: actually Mg = t!
   REAL :: slurryVol      ! Initial slurry volume (m3) NTS not consistent name
   REAL :: slurryProd     ! Slurry production rate (= inflow = outflow) (tonnes/d)
 
@@ -85,10 +85,12 @@ PROGRAM stm
   REAL :: kConc          ! Thermal conductivity of concrete in W/m-K
   REAL :: cpConc         ! Heat capacity of concrete J/kg-K
   REAL :: cpSlurry       ! Heat capacity of slurry J/kg-K
+  REAL :: hfSlurry       ! Latent heat of fusion of slurry J/kg
   REAL :: dConc          ! Density of concrete kg/m3
   REAL :: dSlurry        ! Density of slurry kg/m3
   REAL :: glConc         ! Gradient length within concrete substrate in m
   REAL :: glSlur         ! Gradient length within slurry in m
+  REAL :: soilDamp       ! Soil damping depth, where averaging period reaches 1 full yr, in m
 
   ! Heat flux variables in W/m2 out of slurry
   REAL :: Qrad           ! "To" sun
@@ -124,7 +126,7 @@ PROGRAM stm
     parFile = 'pars.txt'
     userParFile = 'user_pars.txt'
     ID = '01'
-    calcWeather = .FALSE.
+    calcWeather = .TRUE.
   END IF
 
 
@@ -182,17 +184,21 @@ PROGRAM stm
   READ(2,*) kConc
   READ(2,*) cpConc
   READ(2,*) cpSlurry
+  READ(2,*) hfSlurry
   READ(2,*) dConc
   READ(2,*) dSlurry
   READ(2,*) glConc
   READ(2,*) glSlur
   READ(2,*) absorp
+  READ(2,*) soilDamp
 
   ! Output file header
-  WRITE(10,*) 'Day of  Day of Year Slurry  Slurry  Air    Wall  Floor  Slurry'
-  WRITE(10,*) 'sim.     year        mass   depth    T      T      T      T'
+  WRITE(10,*) 'Day of  Day of    Year   Slurry  Frozen  Slurry   Air    Wall   Floor    Slurry'
+  WRITE(10,*) 'sim.     year             mass    mass   depth     T      T       T        T'
+
   WRITE(11,*) 'Day of  Day of Year ' 
   WRITE(11,*) 'sim.     year               Qrad         Qslur2air     Qslur2floor      Qslur2wall       Qout' 
+
   WRITE(12,*) 'Day of  Day of Year Air   Radiation'
   WRITE(12,*) 'sim.     year        T'
   
@@ -237,8 +243,8 @@ PROGRAM stm
 
   ! Substrate temperature based on moving average
   ! NTS: how about aveperiods > 365?
-  wallAvePeriod = wallDepth/3.0*365
-  floorAvePeriod = buriedDepth/3.0*365
+  wallAvePeriod = wallDepth/soilDamp*365
+  floorAvePeriod = buriedDepth/soilDamp*365
 
   ! Calculate moving average for first day of year
   ! Wall first
@@ -304,6 +310,9 @@ PROGRAM stm
     ! Empty and add slurry at beginning of day
     IF (DOY == emptyDOY1 .OR. DOY == emptyDOY2) THEN
       massSlurry = residMass
+      IF (massFrozen .GT. massSlurry) THEN
+        massFrozen = massSlurry
+      END IF
     END IF
 
     ! Update slurry mass and temperature from addition
@@ -322,12 +331,40 @@ PROGRAM stm
 
     DO HR = 1,24,1
     
-      ! Calculate heat transfer rates, all in Watts (J/s)
+      ! Calculate heat transfer rates, all in watts (J/s)
       Qslur2air = uAir*(tempSlurry - tempAir(DOY))*areaAir
       Qslur2floor = uFloor*(tempSlurry - tempFloor(DOY))*areaFloor
       Qslur2wall = uWall*(tempSlurry - tempWall(DOY))*areaWall
       Qout = Qrad + Qslur2air + Qslur2wall + Qslur2floor
       dTemp = - Qout*3600./(1000*cpSlurry*massSlurry)
+
+      ! Freezing
+      IF (tempSlurry .LT. 0.01) THEN
+        dmassFrozen = Qout / hfSlurry / 1000 * 3600
+        IF (dmassFrozen .GT. 0. .AND. massFrozen + dmassFrozen .GT. massSlurry) THEN
+          ! Some heat loss goes toward freezing all slurry
+          massFrozen = massSlurry
+          dTemp = - (Qout - (massSlurry - massFrozen) * hfSlurry) * 3600. / (1000*cpSlurry*massSlurry)
+        ELSE IF (dmassFrozen .GT. 0.) THEN
+          ! All heat loss goes toward freezing some slurry
+          massFrozen = massFrozen + dmassFrozen
+          dTemp = 0
+        END IF
+      END IF
+
+      ! Melting
+      IF (massFrozen .GT. 0 .AND. Qout .LT. 0) THEN
+        dmassFrozen = Qout / hfSlurry / 1000 * 3600
+        IF (ABS(dmassFrozen) .GT. massFrozen) THEN
+          ! Some heat gain goes toward melting all frozen slurry
+          massFrozen = 0
+          dTemp = - (Qout - (massFrozen) * hfSlurry) * 3600. / (1000*cpSlurry*massSlurry)
+        ELSE
+          ! All heat gain goes toward melting some frozen slurry
+          massFrozen = massFrozen + dmassFrozen
+          dTemp = 0
+        END IF
+      END IF
       
       ! Steady-state temperature
       tempSS = (uAir*tempAir(DOY)*areaAir + uFloor*tempFloor(DOY)*areaFloor + uWall*tempWall(DOY)*areaWall - Qrad) / &
@@ -347,8 +384,8 @@ PROGRAM stm
     END DO
 
 
-    WRITE(10,"(1X,I4,5X,I3,5X,I4,1X,6F8.2)") DOS, DOY, YR, massSlurry, slurryDepth, tempAir(DOY), tempWall(DOY), tempFloor(DOY), &
-      & sumTempSlurry/24. 
+    WRITE(10,"(1X,I4,5X,I3,5X,I4,1X,7F8.2)") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
+        & tempWall(DOY), tempFloor(DOY), sumTempSlurry/24. 
 
     WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,5F15.0)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2wall, Qout
 
