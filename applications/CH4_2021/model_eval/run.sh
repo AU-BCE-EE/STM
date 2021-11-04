@@ -21,6 +21,7 @@ R CMD BATCH --nosave --norestore 'plot.R'
 
 rm Rplots.pdf
 rm plot.Rout
+rm .RData
 
 plot_end_time="$SECONDS"
 
