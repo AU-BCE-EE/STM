@@ -60,8 +60,8 @@ For slurry, the parameter represents the degree of mixing.
 Radiation, taken as the product of solar radiation and slurry surface emissivity, can only increase slurry temperature.
 
 ## Numerical solution
-A simple first-order fixed timestep approach is used.
-The timestep is one hour, although weather is taken as constant over each day.
+A simple first-order fixed time step approach is used.
+The time step is one hour, although weather is taken as constant over each day.
 To avoid numerical instability (probably only a problem when slurry mass (depth) is very low, a steady-state temperature is calculated at each time step, and taken as the slurry temperature if rate calculations suggest that the slurry temperature should surpass the steady-state value.
 
 ## Freezing
