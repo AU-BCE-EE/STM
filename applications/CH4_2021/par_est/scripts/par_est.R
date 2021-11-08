@@ -15,15 +15,16 @@ measd$height <- paste(measd$height, ' m')
 measd$site <- substr(measd$site, 1, 4)
 measd$site[measd$site == 'Rånä'] <- 'Raan'
 
-measd <- subset(measd, site == 'Back')
-
 # Average temperature
 meas <- aggregate(temp ~ site + date, data = measd, FUN = mean)
 
 # Define residuals function
 resCalc <- function(p, meas.dat){
 
-  p['soilDamp'] <- abs(p['soilDamp'])
+  # Cheap fix for negative parameter values
+  p <- abs(p)
+
+  # Change name 
   meas <- meas.dat
 
   # Write parameter values to file
@@ -34,7 +35,11 @@ resCalc <- function(p, meas.dat){
 
   # Run model
   cat('. ')
-  system('./stm Back ../pars/pars.txt ../pars/user_pars.txt ../weather/weather.txt')
+  system('./stm Back ../pars/pars.txt ../pars/Back_u_pars.txt ../weather/weather.txt &
+          ./stm Fitt ../pars/pars.txt ../pars/Fitt_u_pars.txt ../weather/weather.txt &
+          ./stm Lind ../pars/pars.txt ../pars/Lind_u_pars.txt ../weather/weather.txt &
+          ./stm Raan ../pars/pars.txt ../pars/Raan_u_pars.txt ../weather/weather.txt
+         ')
 
   # Move output
   system('mv *_temp.txt* ../stm_output')
@@ -42,18 +47,23 @@ resCalc <- function(p, meas.dat){
   system('mv *_rates* ../stm_output')
 
   # Read in calculated temperatures
-  mod <- read.table('../stm_output/Back_temp.txt', skip = 2, header = TRUE)
-  names(mod) <- c('dos', 'doy', 'year', 'mass.slurry', 'mass.frozen', 
-                'depth.slurry', 'temp.air', 'temp.wall', 'temp.floor', 
-                'temp.slurry')
-
+  mod <- data.frame()
+  ff <- list.files('../stm_output', pattern = 'temp.txt')
+  for (i in ff) {
+    d <- read.table(paste0('../stm_output/', i), skip = 2, header = TRUE)
+    names(d) <- c('dos', 'doy', 'year', 'mass.slurry', 'mass.frozen', 
+                  'depth.slurry', 'temp.air', 'temp.wall', 'temp.floor', 
+                  'temp.slurry')
+    d$site <- substr(i, 1, 4)
+    mod <- rbind(mod, d)
+  }
 
   mod$year <- 2019 + mod$year
   mod$date <- as.POSIXct(paste(mod$year, mod$doy), format = '%Y %j')
 
   # Merge measured and calculated
-  dat <- merge(meas[, c('date', 'temp')], mod[, c('date', 'temp.slurry')], by = 'date')
-  dat <<- dat
+  dat <- merge(meas[, c('site', 'date', 'temp')], mod[, c('site', 'date', 'temp.slurry')], by = c('site', 'date'))
+  nddat <<- dat
 
   res <- dat$temp.slurry - dat$temp
   obj <- sum(abs(res))
@@ -65,9 +75,14 @@ resCalc <- function(p, meas.dat){
 p <- c(uAir = 20, glConc = 1, glSlur = 0.3, absorp = 0.05, soilDamp = 10)
 
 # Optimize
-m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
+#m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
+#
+#m
 
-m
+mb <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'L-BFGS-B', lower = c(uAir = 1, glConc = 0.01, glSlur = 0.01, absorp = 0, soilDamp = 0.1))
+
+mb
+
 
 plot(temp.slurry ~ date, data = dat, col = 'black', type = 'l')
 lines(temp ~ date, data = dat, col = 'red')
