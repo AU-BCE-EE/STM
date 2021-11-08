@@ -122,10 +122,10 @@ PROGRAM stm
     CALL GET_COMMAND_ARGUMENT(4, weatherFile)
     calcWeather = .FALSE.
   ELSE
-    WRITE(*,*) 'No file names given so 2 default parameter files will be used, with calculated weather.'
+    WRITE(*,*) 'No file names given so 2 default parameter files will be used, with calculated weather and ID 0001.'
     parFile = 'pars.txt'
     userParFile = 'user_pars.txt'
-    ID = '01'
+    ID = '0001'
     calcWeather = .TRUE.
   END IF
 
