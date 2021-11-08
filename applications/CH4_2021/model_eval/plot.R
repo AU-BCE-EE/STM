@@ -1,4 +1,4 @@
-# Plots temperature data from Kristina
+# Plots measured and calculated temperatures
 
 library(ggplot2)
 library(lubridate)
@@ -40,16 +40,16 @@ dm$group[dm$site %in% c('Back', 'Fitt')] <- 'B'
 
 ggplot(dm, aes(date, temp, colour = site)) +
   geom_line(lty = 1) +
-  geom_line(aes(date, temp.slurry), lty = 3) +
+  geom_line(aes(date, temp.slurry), lty = 2) +
   labs(x = 'Date', y = expression('Temperature'~(degree*C)), 
-       colour = 'Position (from surface)') +
+       colour = 'Site') +
   theme(legend.position = 'top')
 ggsave('plots/ave_stor_temp.png', height = 6, width = 8)
 
 ggplot(dm, aes(date, temp)) +
   geom_line(col = 'red') +
   geom_line(aes(date, temp.slurry), colour = 'black') +
-  geom_line(aes(date, temp.air), colour = 'skyblue', lty = 2) +
+  geom_line(aes(date, temp.air), colour = 'skyblue', lty = 1) +
   facet_wrap(~ site) +
   labs(x = 'Date', y = expression('Temperature'~(degree*C)), 
        colour = 'Position (from surface)') +
@@ -59,7 +59,7 @@ ggsave('plots/ave_stor_temp_4.png', height = 6, width = 8)
 ggplot(dat, aes(date.time, temp, colour = factor(height))) +
   geom_line() +
   geom_line(aes(date, temp.slurry), colour = 'black') +
-  geom_line(aes(date, temp.air), colour = 'skyblue', lty = 2) +
+  geom_line(aes(date, temp.air), colour = 'skyblue', lty = 1) +
   facet_wrap(~ site) +
   labs(x = 'Date', y = expression('Temperature'~(degree*C)), 
        colour = 'Position (from surface)') +
