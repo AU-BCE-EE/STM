@@ -36,7 +36,7 @@ PROGRAM stm
   !!CHARACTER (LEN=1) :: ventType ! Type of ventilation
 
   ! File names
-  CHARACTER (LEN=25) :: userParFile, parFile, weatherFile
+  CHARACTER (LEN=30) :: userParFile, parFile, weatherFile
   INTEGER :: numArgs
 
   ! Temperatures, all in degrees C
