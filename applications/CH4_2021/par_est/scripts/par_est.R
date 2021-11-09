@@ -79,11 +79,8 @@ p <- c(uAir = 20, glConc = 1, glSlur = 0.3, absorp = 0.05, soilDamp = 10)
 #
 #m
 
-mb <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'L-BFGS-B', lower = c(uAir = 1, glConc = 0.01, glSlur = 0.01, absorp = 0, soilDamp = 0.1))
+mb <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'L-BFGS-B', 
+            lower = c(uAir = 1, glConc = 0.01, glSlur = 0.01, absorp = 0, soilDamp = 0.1),
+            upper = c(uAir = 500, glConc = 3, glSlur = 3, absorp = 1.0, soilDamp = 10))
 
 mb
-
-
-plot(temp.slurry ~ date, data = dat, col = 'black', type = 'l')
-lines(temp ~ date, data = dat, col = 'red')
-
