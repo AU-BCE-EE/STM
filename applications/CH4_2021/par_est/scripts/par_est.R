@@ -19,10 +19,13 @@ measd$site[measd$site == 'Rånä'] <- 'Raan'
 meas <- aggregate(temp ~ site + date, data = measd, FUN = mean)
 
 # Define residuals function
-resCalc <- function(p, meas.dat){
+resCalc <- function(p, meas.dat, fixed){
 
   # Cheap fix for negative parameter values
   p <- abs(p)
+  if (!missing(fixed)) {
+    p <- c(p, fixed)
+  }
 
   # Change name 
   meas <- meas.dat
@@ -72,14 +75,21 @@ resCalc <- function(p, meas.dat){
 }
 
 # Initial par guesses
-p <- c(uAir = 20, glConc = 1, glSlur = 0.3, absorp = 0.05, soilDamp = 10)
+p <- c(uAir = 50, glConc = 1, glSlur = 0.3, absorp = 0.01, soilDamp = 3)
+p <- c(uAir = 50, glConc = 1, glSlur = 0.3, absorp = 0.01)
+p <- c(glConc = 3, glSlur = 0.3, absorp = 0.01)
+fixed <- c(soilDamp = 6, uAir = 50)
+fixed <- c(soilDamp = 6, uAir = 50)
+
+p <- c(uAir = 100, glConc = 1, glSlur = 0.3, absorp = 0.01, soilDamp = 3)
 
 # Optimize
-#m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
-#
-#m
+#m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas, fixed = fixed), method = 'Nelder-Mead')
+m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
 
-mb <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'L-BFGS-B', 
+m
+
+mb <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas, fixed = fixed), method = 'L-BFGS-B', 
             lower = c(uAir = 1, glConc = 0.01, glSlur = 0.01, absorp = 0, soilDamp = 0.1),
             upper = c(uAir = 500, glConc = 3, glSlur = 3, absorp = 1.0, soilDamp = 10))
 

@@ -18,6 +18,6 @@ User-specified parameters for STM model
 172       Day of year with most radiation (integer) (raddestDOY)
 7         Slurry addition rate (tonnes/d) (slurryProd)
 100       Residual slurry mass left when emptying (tonnes or m3) (residMass)
-10        Slurry temperature (deg. C) (tempIn)
+15        Slurry temperature (deg. C) (tempIn)
 -1       Emptying DOY 1 (emptyDOY1)
 -1        Emptying DOY 2 (emptyDOY2)
