@@ -48,6 +48,7 @@ PROGRAM stm
   REAL :: minAnnTemp     ! Minimum daily average air temperature over the year
   REAL :: tempInitial    ! Initial slurry temperature
   REAL :: tempSlurry     ! Hourly or daily slurry temperature 
+  REAL :: tempSlurryH0   ! Slurry temperature at start of day (used for Qfeed calc)
   REAL :: tempSS         ! Steady-state slurry temperature
   REAL :: sumTempSlurry  ! Sum of hourly slurry temperatures for calculating daily mean
   REAL :: tempIn         ! Temperature of slurry when added to channel/pit
@@ -98,6 +99,7 @@ PROGRAM stm
   REAL :: Qslur2wall     ! To wall
   REAL :: Qslur2floor    ! To floor
   !REAL :: Qslur2eff      ! To effluent (includes flow in)
+  REAL :: Qfeed          ! Loss due to feeding
   REAL :: Qout           ! Total
 
   LOGICAL :: calcWeather ! .TRUE. when weather inputs are calculated (otherwise read from file)
@@ -315,9 +317,10 @@ PROGRAM stm
       END IF
     END IF
 
-    ! Update slurry mass and temperature from addition
-    tempSlurry = (tempSlurry * massSlurry + tempIn * slurryProd)/(massSlurry + slurryProd)
+    ! Update slurry mass assuming instantaneous slurry addition once per day
     massSlurry = massSlurry + slurryProd
+    tempSlurryH0 = tempSlurry
+    ! Temperature effect of adding slurry is added hourly below
 
     ! Get depth and wall area
     slurryDepth = 1000 * massSlurry / (dSlurry*width*length*nchannels)  ! Slurry depth in m
@@ -332,10 +335,11 @@ PROGRAM stm
     DO HR = 1,24,1
     
       ! Calculate heat transfer rates, all in watts (J/s)
+      Qfeed = (tempSlurryH0 - tempSlurry) * 1000 * massSlurry * cpSlurry
       Qslur2air = uAir*(tempSlurry - tempAir(DOY))*areaAir
       Qslur2floor = uFloor*(tempSlurry - tempFloor(DOY))*areaFloor
       Qslur2wall = uWall*(tempSlurry - tempWall(DOY))*areaWall
-      Qout = Qrad + Qslur2air + Qslur2wall + Qslur2floor
+      Qout = Qfeed + Qrad + Qslur2air + Qslur2wall + Qslur2floor
       dTemp = - Qout*3600./(1000*cpSlurry*massSlurry)
 
       ! Freezing
