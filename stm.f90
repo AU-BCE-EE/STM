@@ -61,9 +61,10 @@ PROGRAM stm
   REAL :: buriedDepth    ! Buried depth (m)
   REAL :: wallDepth      ! Depth at which horizontal heat transfer is evaluated (m) 
   REAL :: length, width  ! Length and width of channel/pit (m)
-  REAL :: areaFloor      ! Channel or pit floor area (m2)
-  REAL :: areaWall       ! Channel or pit wall area (m2)
-  !REAL :: areaSurf       ! Slurry upper surface area (m2)
+  REAL :: areaFloor      ! Channel or pit floor area in contact with soil (m2)
+  REAL :: areaDwall   ! Channel or pit wall area in contact with soil (buried) (m2)
+  REAL :: areaUwall    ! Channel or pit wall area in contact with air (above ground) (outside) and slurry (inside) (m2)
+  !REAL :: areaSurf      ! Slurry upper surface area (m2)
   REAL :: areaAir        ! 
   INTEGER :: nChannels   ! Number of channels or pits
 
@@ -81,9 +82,10 @@ PROGRAM stm
   REAL :: slurryProd     ! Slurry production rate (= inflow = outflow) (tonnes/d)
 
   ! Heat transfer coefficients and related variables
-  REAL :: uAir, uWall, uFloor          ! Convective heat transfer coefficient W/m2-K (J/s-m2-K) 
+  REAL :: uAir, uUwall, uDwall, uFloor, uTop          ! Convective heat transfer coefficient W/m2-K (J/s-m2-K) 
   REAL :: kSlur          ! Thermal conductivity of slurry in W/m-K
   REAL :: kConc          ! Thermal conductivity of concrete in W/m-K
+  REAL :: kSoil          ! Thermal conductivity of soil in W/m-K
   REAL :: cpConc         ! Heat capacity of concrete J/kg-K
   REAL :: cpSlurry       ! Heat capacity of slurry J/kg-K
   REAL :: hfSlurry       ! Latent heat of fusion of slurry J/kg
@@ -91,12 +93,13 @@ PROGRAM stm
   REAL :: dSlurry        ! Density of slurry kg/m3
   REAL :: glConc         ! Gradient length within concrete substrate in m
   REAL :: glSlur         ! Gradient length within slurry in m
+  REAL :: glSoil         ! Gradient length within soil (below floor and beside walls) in m
   REAL :: soilDamp       ! Soil damping depth, where averaging period reaches 1 full yr, in m
 
   ! Heat flux variables in W/m2 out of slurry
   REAL :: Qrad           ! "To" sun
   REAL :: Qslur2air      ! To air
-  REAL :: Qslur2wall     ! To wall
+  REAL :: Qslur2wall, Qslur2dwall, Qslur2uwall   ! To wall
   REAL :: Qslur2floor    ! To floor
   !REAL :: Qslur2eff      ! To effluent (includes flow in)
   REAL :: Qfeed          ! Loss due to feeding
@@ -184,13 +187,15 @@ PROGRAM stm
   READ(2,*) uAir
   READ(2,*) kSlur
   READ(2,*) kConc
+  READ(2,*) kSoil
   READ(2,*) cpConc
   READ(2,*) cpSlurry
   READ(2,*) hfSlurry
   READ(2,*) dConc
   READ(2,*) dSlurry
-  READ(2,*) glConc
   READ(2,*) glSlur
+  READ(2,*) glConc
+  READ(2,*) glSoil
   READ(2,*) absorp
   READ(2,*) soilDamp
 
@@ -199,7 +204,7 @@ PROGRAM stm
   WRITE(10,*) 'sim.     year             mass    mass   depth     T      T       T        T'
 
   WRITE(11,*) 'Day of  Day of Year ' 
-  WRITE(11,*) 'sim.     year               Qrad         Qslur2air     Qslur2floor      Qslur2wall       Qout' 
+  WRITE(11,*) 'sim.     year               Qrad         Qslur2air     Qslur2floor      Qslur2dwall      Qslur2uwall       Qout' 
 
   WRITE(12,*) 'Day of  Day of Year Air   Radiation'
   WRITE(12,*) 'sim.     year        T'
@@ -216,10 +221,11 @@ PROGRAM stm
 
   ! Heat transfer coefficients
   uFloor = 1./(glConc/kConc + glSlur/kSlur)
-  uWall = 1./(glConc/kConc + glSlur/kSlur)
+  uDwall = 1./(glSoil/kSoil + glConc/kConc + glSlur/kSlur)
+  uUwall = 1./(1./uAir + glConc/kConc + glSlur/kSlur)
 
   ! Adjust u for air by gl in slurry
-  uAir = 1./(1/uAir + glSlur/kSlur)
+  uTop = 1./(1./uAir + glSlur/kSlur)
 
   ! Determine airTemp, solRad, and substrate temperatures for a complete year
   ! Start day loop
@@ -324,7 +330,8 @@ PROGRAM stm
 
     ! Get depth and wall area
     slurryDepth = 1000 * massSlurry / (dSlurry*width*length*nchannels)  ! Slurry depth in m
-    areaWall = slurryDepth*2.*(length + width)*nChannels
+    areaDwall = MIN(slurryDepth, buriedDepth) * 2. * (length + width) * nChannels
+    areaUwall = MAX(slurryDepth - buriedDepth, 0.) * 2. * (length + width) * nChannels
 
     ! Start hour loop
     sumTempSlurry = 0
@@ -336,9 +343,11 @@ PROGRAM stm
     
       ! Calculate heat transfer rates, all in watts (J/s)
       Qfeed = (tempSlurryH0 - tempSlurry) * 1000 * slurryProd / 24. / 3600. * cpSlurry
-      Qslur2air = uAir*(tempSlurry - tempAir(DOY))*areaAir
+      Qslur2air = uTop*(tempSlurry - tempAir(DOY))*areaAir
       Qslur2floor = uFloor*(tempSlurry - tempFloor(DOY))*areaFloor
-      Qslur2wall = uWall*(tempSlurry - tempWall(DOY))*areaWall
+      Qslur2dwall = uDwall*(tempSlurry - tempWall(DOY))*areaDwall
+      Qslur2uwall = uUwall*(tempSlurry - tempAir(DOY))*areaUwall
+      Qslur2wall = Qslur2dwall + Qslur2uwall
       Qout = Qfeed + Qrad + Qslur2air + Qslur2wall + Qslur2floor
       dTemp = - Qout*3600./(1000*cpSlurry*massSlurry)
 
@@ -371,8 +380,8 @@ PROGRAM stm
       END IF
       
       ! Steady-state temperature
-      tempSS = (uAir*tempAir(DOY)*areaAir + uFloor*tempFloor(DOY)*areaFloor + uWall*tempWall(DOY)*areaWall - Qrad) / &
-        & (uAir*areaAir + uFloor*areaFloor + uWall*areaWall)
+      tempSS = (uTop*tempAir(DOY)*areaAir + uFloor*tempFloor(DOY)*areaFloor + uDwall*tempWall(DOY)*areaDwall + &
+        & uUwall*tempWall(DOY)*areaUwall - Qrad) / (uTop*areaAir + uFloor*areaFloor + uDwall*areaDwall + uUwall*areaUwall)
 
       tempSlurry = tempSlurry + dTemp
       
@@ -391,7 +400,7 @@ PROGRAM stm
     WRITE(10,"(1X,I4,5X,I3,5X,I4,1X,7F8.2)") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
         & tempWall(DOY), tempFloor(DOY), sumTempSlurry/24. 
 
-    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,5F15.0)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2wall, Qout
+    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,6F15.0)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2dwall, Qslur2uwall, Qout
 
     WRITE(12,"(1X,I4,5X,I3,5X,I4,1X,2F15.0)") DOS, DOY, YR, tempAir(DOY), solRad(DOY)
     
