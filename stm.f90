@@ -335,7 +335,7 @@ PROGRAM stm
     DO HR = 1,24,1
     
       ! Calculate heat transfer rates, all in watts (J/s)
-      Qfeed = (tempSlurryH0 - tempSlurry) * 1000 * massSlurry * cpSlurry
+      Qfeed = (tempSlurryH0 - tempSlurry) * 1000 * slurryProd / 24. / 3600. * cpSlurry
       Qslur2air = uAir*(tempSlurry - tempAir(DOY))*areaAir
       Qslur2floor = uFloor*(tempSlurry - tempFloor(DOY))*areaFloor
       Qslur2wall = uWall*(tempSlurry - tempWall(DOY))*areaWall
