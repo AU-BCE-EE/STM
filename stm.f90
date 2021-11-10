@@ -18,10 +18,10 @@ PROGRAM stm
   ! Days, and other integers
   INTEGER :: HR          ! Hour of day (1-24)
   INTEGER :: DOY         ! Day of year (1 - 365)
+  INTEGER :: DOS         ! Day of simulation
   INTEGER :: YR          ! Relative year (1 + )
   INTEGER :: targetDOY   ! Day of year in target_temp.txt file
   INTEGER :: nextTargetDOY   ! Day of year in target_temp.txt file
-  INTEGER :: DOS         ! Day of simulation
   INTEGER :: nDays       ! Number of days in simulation
   INTEGER :: startingDOY ! Starting day of year
   INTEGER :: hottestDOY  ! Hottest day of year
@@ -29,7 +29,7 @@ PROGRAM stm
   INTEGER :: emptyDOY1   ! 
   INTEGER :: emptyDOY2   ! 
   INTEGER :: wallAvePeriod, floorAvePeriod ! Number of days in running averages for wall and floor temperature
-  INTEGER :: fileStat    ! End of file indicator of target_temp.txt
+  INTEGER :: fileStat    ! End of file indicator
 
   ! Simulation ID
   CHARACTER (LEN=4) :: ID ! ID code of simulation
@@ -37,52 +37,54 @@ PROGRAM stm
 
   ! File names
   CHARACTER (LEN=30) :: userParFile, parFile, weatherFile
+
+  ! Command line arguments, length
   INTEGER :: numArgs
 
   ! Temperatures, all in degrees C
   REAL, DIMENSION(365) :: tempAir, tempFloor, tempWall ! Air, floor (bottom of channel or pit), and wall (side of channel or pit)
-  REAL :: tempSum, dTemp
+  REAL :: tempSum        ! 24 h temperature sum for calculating daily average
+  REAL :: dTemp          ! Change in temperature during time step (deg. C) 
   REAL :: tempTarget     ! Target temperature for a particular period when heated
   REAL :: nextTempTarget     ! Target temperature for a particular period when heated
   REAL :: maxAnnTemp     ! Maximum daily average air temperature over the year
   REAL :: minAnnTemp     ! Minimum daily average air temperature over the year
   REAL :: tempInitial    ! Initial slurry temperature
-  REAL :: tempSlurry     ! Hourly or daily slurry temperature 
+  REAL :: tempSlurry     ! Hourly slurry temperature 
   REAL :: tempSlurryH0   ! Slurry temperature at start of day (used for Qfeed calc)
-  REAL :: tempSS         ! Steady-state slurry temperature
+  REAL :: tempSS         ! Steady-state slurry temperature used to deal with numerical instability
   REAL :: sumTempSlurry  ! Sum of hourly slurry temperatures for calculating daily mean
-  REAL :: tempIn         ! Temperature of slurry when added to channel/pit
+  REAL :: tempIn         ! Temperature of slurry when added to channel/pit/tank/lagoon
   REAL :: trigPartTemp   ! Sine part of temperature expression
   REAL :: residMass      ! Mass of slurry left behind when emptying
 
-  ! Geometry of channel or pit
+  ! Geometry of storage structure
   REAL :: slurryDepth    ! Depth of slurry in channel/pit (m)
   REAL :: channelDepth   ! Total depth of channel/pit (m)
   REAL :: buriedDepth    ! Buried depth (m)
-  REAL :: wallDepth      ! Depth at which horizontal heat transfer is evaluated (m) 
+  REAL :: wallDepth      ! Depth at which horizontal heat transfer to soil is evaluated (m) 
   REAL :: length, width  ! Length and width of channel/pit (m)
-  REAL :: areaFloor      ! Channel or pit floor area in contact with soil (m2)
-  REAL :: areaDwall   ! Channel or pit wall area in contact with soil (buried) (m2)
-  REAL :: areaUwall    ! Channel or pit wall area in contact with air (above ground) (outside) and slurry (inside) (m2)
-  !REAL :: areaSurf      ! Slurry upper surface area (m2)
-  REAL :: areaAir        ! 
+  REAL :: areaFloor      ! Storage floor area in contact with soil (m2)
+  REAL :: areaDwall      ! Storage wall area (D for down) in contact with soil (buried) (m2)
+  REAL :: areaUwall      ! Storage wall area (U for upper) in contact with air (above ground) (outside) and slurry (inside) (m2)
+  REAL :: areaAir        ! Slurry upper surface area (m2)
   INTEGER :: nChannels   ! Number of channels or pits
 
   ! Solar
-  REAL :: areaSol        ! 
-  REAL :: absorp         !
+  REAL :: areaSol        ! Area intercepting solar radiation (m2) 
+  REAL :: absorp         ! Slurry or cover effective absorptivity (dimensionless)
   REAL :: maxAnnRad      ! Maximum daily average radiation over the year
   REAL :: minAnnRad      ! Minimum daily average radiation over the year
-  REAL, DIMENSION(365) :: solRad
+  REAL, DIMENSION(365) :: solRad ! Average solar radiation rate (W/m2)
   REAL :: trigPartRad    ! Sine part of radiation expression
   
   ! Other slurry variables
-  REAL :: massSlurry, massFrozen = 0, dmassFrozen   ! Slurry mass (kg) NTS: actually Mg = t!
+  REAL :: massSlurry, massFrozen = 0, dmassFrozen   ! Slurry mass (Mg = 1000 kg = metric tonnes)
   REAL :: slurryVol      ! Initial slurry volume (m3) NTS not consistent name
-  REAL :: slurryProd     ! Slurry production rate (= inflow = outflow) (tonnes/d)
+  REAL :: slurryProd     ! Slurry production rate (= inflow = outflow) (Mg/d)
 
   ! Heat transfer coefficients and related variables
-  REAL :: uAir, uUwall, uDwall, uFloor, uTop          ! Convective heat transfer coefficient W/m2-K (J/s-m2-K) 
+  REAL :: uAir, uUwall, uDwall, uFloor, uTop ! Convective or effective heat transfer coefficient W/m2-K (J/s-m2-K) 
   REAL :: kSlur          ! Thermal conductivity of slurry in W/m-K
   REAL :: kConc          ! Thermal conductivity of concrete in W/m-K
   REAL :: kSoil          ! Thermal conductivity of soil in W/m-K
@@ -96,16 +98,18 @@ PROGRAM stm
   REAL :: glSoil         ! Gradient length within soil (below floor and beside walls) in m
   REAL :: soilDamp       ! Soil damping depth, where averaging period reaches 1 full yr, in m
 
-  ! Heat flux variables in W/m2 out of slurry
+  ! Heat flux variables in W out of slurry
   REAL :: Qrad           ! "To" sun
   REAL :: Qslur2air      ! To air
-  REAL :: Qslur2wall, Qslur2dwall, Qslur2uwall   ! To wall
-  REAL :: Qslur2floor    ! To floor
-  !REAL :: Qslur2eff      ! To effluent (includes flow in)
+  REAL :: Qslur2wall, Qslur2dwall, Qslur2uwall   ! Out through wall (to air or soil)
+  REAL :: Qslur2floor    ! Out through floor to soil
   REAL :: Qfeed          ! Loss due to feeding
   REAL :: Qout           ! Total
+  REAL :: QoutPart       ! Total after some use for melting/freezing
+  REAL :: sumQout        ! Sum of total for average
 
   LOGICAL :: calcWeather ! .TRUE. when weather inputs are calculated (otherwise read from file)
+  LOGICAL :: warming     ! .TRUE. when slurry is warming over a time step
 
   ! Other parameters
   REAL, PARAMETER :: PI = 3.1415927
@@ -144,13 +148,11 @@ PROGRAM stm
   IF (.NOT. calcWeather) THEN
     OPEN (UNIT=3, FILE=weatherFile, STATUS='UNKNOWN')
   END IF
-  !!!OPEN (UNIT=3, FILE='target_temp.txt', STATUS='OLD')
 
   ! Output files, name based on ID
   OPEN (UNIT=10,FILE=(''//ID//'_temp.txt'),STATUS='UNKNOWN')
   OPEN (UNIT=11,FILE=(''//ID//'_rates.txt'),STATUS='UNKNOWN')
   OPEN (UNIT=12,FILE=(''//ID//'_weather.txt'),STATUS='UNKNOWN')
-  !OPEN (UNIT=12,FILE='pars'//ID//'.txt',STATUS='UNKNOWN')
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -180,7 +182,6 @@ PROGRAM stm
   READ(1,*) tempIn
   READ(1,*) emptyDOY1
   READ(1,*) emptyDOY2 
-  !!!READ(1,*) ventType
 
   ! Other parameters
   READ(2,*) 
@@ -204,7 +205,8 @@ PROGRAM stm
   WRITE(10,*) 'sim.     year             mass    mass   depth     T      T       T        T'
 
   WRITE(11,*) 'Day of  Day of Year ' 
-  WRITE(11,*) 'sim.     year               Qrad         Qslur2air     Qslur2floor      Qslur2dwall      Qslur2uwall       Qout' 
+  WRITE(11,*) 'sim.     year               Qrad         Qslur2air     Qslur2floor      Qslur2dwall      Qslur2uwall &
+    &          Qfeed       Qout       Qoutave' 
 
   WRITE(12,*) 'Day of  Day of Year Air   Radiation'
   WRITE(12,*) 'sim.     year        T'
@@ -214,17 +216,14 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Calculate some geometry-related variables
-  wallDepth = 0.5 * buriedDepth
-  areaFloor = width*length*nChannels
-  !areaSurf = width*length*nChannels
-  massSlurry = slurryVol * dSlurry / 1000 ! Slurry mass is in tonnes = 1000 kg
+  wallDepth = 0.5 * buriedDepth           ! m
+  areaFloor = width*length*nChannels      ! m2
+  massSlurry = slurryVol * dSlurry / 1000 ! Slurry mass is in Mg = 1000 kg
 
-  ! Heat transfer coefficients
+  ! Heat transfer coefficients (W/m2-K)
   uFloor = 1./(glConc/kConc + glSlur/kSlur)
   uDwall = 1./(glSoil/kSoil + glConc/kConc + glSlur/kSlur)
   uUwall = 1./(1./uAir + glConc/kConc + glSlur/kSlur)
-
-  ! Adjust u for air by gl in slurry
   uTop = 1./(1./uAir + glSlur/kSlur)
 
   ! Determine airTemp, solRad, and substrate temperatures for a complete year
@@ -234,14 +233,13 @@ PROGRAM stm
       ! Use sine curve to determine air temp
       trigPartTemp = (maxAnnTemp - minAnnTemp)*SIN((DOY - hottestDOY)*2*PI/365. + 0.5*PI)/2.
       tempAir(DOY) = trigPartTemp + (minAnnTemp + maxAnnTemp)/2.
-
       trigPartRad = (maxAnnRad - minAnnRad)*SIN((DOY - raddestDOY)*2*PI/365. + 0.5*PI)/2.
       solRad(DOY) = trigPartRad + (minAnnRad + maxAnnRad)/2.
       IF (solRad(DOY) < 0) THEN
         solRad(DOY) = 0
       END IF
     END DO
-  ELSE 
+  ELSE ! Read weather data from file
     ! Skip header
     READ(3,*)
     DO WHILE (.NOT. IS_IOSTAT_END(fileStat))
@@ -250,7 +248,6 @@ PROGRAM stm
   END IF
 
   ! Substrate temperature based on moving average
-  ! NTS: how about aveperiods > 365?
   wallAvePeriod = wallDepth/soilDamp*365
   floorAvePeriod = buriedDepth/soilDamp*365
 
@@ -323,63 +320,96 @@ PROGRAM stm
       END IF
     END IF
 
-    ! Update slurry mass assuming instantaneous slurry addition once per day
-    massSlurry = massSlurry + slurryProd
-    tempSlurryH0 = tempSlurry
-    ! Temperature effect of adding slurry is added hourly below
-
     ! Get depth and wall area
     slurryDepth = 1000 * massSlurry / (dSlurry*width*length*nchannels)  ! Slurry depth in m
     areaDwall = MIN(slurryDepth, buriedDepth) * 2. * (length + width) * nChannels
     areaUwall = MAX(slurryDepth - buriedDepth, 0.) * 2. * (length + width) * nChannels
 
-    ! Start hour loop
-    sumTempSlurry = 0
-
     ! Radiation fixed for day (W = J/s)
     Qrad = - absorp * solRad(DOY) * areaSol
 
+    ! Start hour loop
+    sumTempSlurry = 0
+    sumQout = 0
+
     DO HR = 1,24,1
+
+      ! Update slurry mass, distributing inflow evenly across day
+      !   t           t            t/d     / h/d * h = t         
+      massSlurry = massSlurry + slurryProd / 24. * 1
     
       ! Calculate heat transfer rates, all in watts (J/s)
-      Qfeed = (tempSlurryH0 - tempSlurry) * 1000 * slurryProd / 24. / 3600. * cpSlurry
+      ! Qfeed is hypothetical rate pretending to make up difference relative to new mass at tempSlurry
+      ! J/s               K           kg/t      t/d     / s/d    *  J/kg-K   
+      Qfeed = (tempSlurry - tempIn) * 1000 * slurryProd / 86400. * cpSlurry
+      ! J/s   J/s-m2-K     K               K          m2
       Qslur2air = uTop*(tempSlurry - tempAir(DOY))*areaAir
       Qslur2floor = uFloor*(tempSlurry - tempFloor(DOY))*areaFloor
       Qslur2dwall = uDwall*(tempSlurry - tempWall(DOY))*areaDwall
       Qslur2uwall = uUwall*(tempSlurry - tempAir(DOY))*areaUwall
+      ! W
       Qslur2wall = Qslur2dwall + Qslur2uwall
       Qout = Qfeed + Qrad + Qslur2air + Qslur2wall + Qslur2floor
-      dTemp = - Qout*3600./(1000*cpSlurry*massSlurry)
+      !                                J/s
+      !                 ---------------------------------------
+      ! K       J/s  *  s/h /(kg/t *  J/kg-K  *  t)         * h
+      dTemp = - Qout * 3600./(1000 * cpSlurry * massSlurry) * 1
 
-      ! Freezing
-      IF (tempSlurry .LT. 0.01) THEN
-        dmassFrozen = Qout / hfSlurry / 1000 * 3600
-        IF (dmassFrozen .GT. 0. .AND. massFrozen + dmassFrozen .GT. massSlurry) THEN
-          ! Some heat loss goes toward freezing all slurry
-          massFrozen = massSlurry
-          dTemp = - (Qout - (massSlurry - massFrozen) * hfSlurry) * 3600. / (1000*cpSlurry*massSlurry)
-        ELSE IF (dmassFrozen .GT. 0.) THEN
-          ! All heat loss goes toward freezing some slurry
-          massFrozen = massFrozen + dmassFrozen
-          dTemp = 0
-        END IF
+      ! Warming or cooling?
+      IF (Qout .GE. 0.0) THEN
+        warming = .FALSE.
+      ELSE 
+        warming = .TRUE.
       END IF
 
-      ! Melting
-      IF (massFrozen .GT. 0 .AND. Qout .LT. 0) THEN
-        dmassFrozen = Qout / hfSlurry / 1000 * 3600
-        IF (ABS(dmassFrozen) .GT. massFrozen) THEN
-          ! Some heat gain goes toward melting all frozen slurry
-          massFrozen = 0
-          dTemp = - (Qout - (massFrozen) * hfSlurry) * 3600. / (1000*cpSlurry*massSlurry)
-        ELSE
-          ! All heat gain goes toward melting some frozen slurry
-          massFrozen = massFrozen + dmassFrozen
-          dTemp = 0
+      ! NTS: Check freeze/thaw again
+      ! Assess thawing if any frozen slurry is present
+      ! Temperature should always be <= 0 here
+      IF (warming .AND. massFrozen .GT. 0.0) THEN ! Warming and ice is present
+        IF (dTemp .GT. 0.0 - tempSlurry) THEN ! There is enough heat to do some melting
+          ! First warm slurry to 0C
+          dTemp = 0.0 - tempSlurry
+          tempSlurry = 0.0
+          QoutPart = Qout + dTemp * 1000. * massSlurry * cpSlurry /  3600. / 1.
+          dmassFrozen = QoutPart * 3600. * 1. / hfSlurry / 1000.
+          ! Then melt
+          IF (-dmassFrozen .GE. massFrozen) THEN 
+            ! Melt all, with some dTemp left over, warming
+            massFrozen = 0.
+            QoutPart = QoutPart - massFrozen * 1000 * hfSlurry / 3600. / 1.
+            dTemp = - QoutPart * 3600./(1000 * cpSlurry * massSlurry) * 1
+          ELSE
+            ! Melt some, with no dTemp left over
+            massFrozen = massFrozen + dmassFrozen
+            dTemp = 0.0
+          END IF
+        ELSE ! 
+        END IF ! No melting, only heating toward 0C, use dTemp from above
+      ELSE IF (.NOT. warming) THEN ! Cooling, assess freezing
+        IF (tempSlurry + dTemp .LT. 0.0) THEN ! Some freezing, or at least some frozen slurry will remain
+          ! First cool (or warm, remember this is a lumped model) slurry to 0C
+          dTemp = 0.0 - tempSlurry
+          tempSlurry = 0.0
+          QoutPart = Qout + dTemp * 1000. * massSlurry * cpSlurry /  3600. / 1.
+          !                     J        /     J/t
+          !              --------------     ------------
+          !    t         J/s * s/h  * h  / J/kg   / kg/t 
+          dmassFrozen = QoutPart * 3600. * 1. / hfSlurry / 1000.
+          ! Then freeze as much as possible
+          IF (dmassFrozen .GE. massSlurry - massFrozen) THEN 
+            ! Freeze all remaining liquid slurry, with some dTemp left over, warming
+            QoutPart = QoutPart - (massSlurry - massFrozen) * 1000 * hfSlurry / 3600. / 1.
+            massFrozen = massSlurry
+            dTemp = - QoutPart * 3600./(1000 * cpSlurry * massSlurry) * 1
+          ELSE
+            ! Freeze some, with no dTemp left over
+            massFrozen = massFrozen + dmassFrozen
+            dTemp = 0.0
+          END IF
         END IF
       END IF
       
-      ! Steady-state temperature
+      ! Steady-state temperature NTS: how to deal with freezing?
       tempSS = (uTop*tempAir(DOY)*areaAir + uFloor*tempFloor(DOY)*areaFloor + uDwall*tempWall(DOY)*areaDwall + &
         & uUwall*tempWall(DOY)*areaUwall - Qrad) / (uTop*areaAir + uFloor*areaFloor + uDwall*areaDwall + uUwall*areaUwall)
 
@@ -393,6 +423,7 @@ PROGRAM stm
       END IF
       
       sumTempSlurry = sumTempSlurry + tempSlurry
+      sumQout = sumQout + Qout
 
     END DO
 
@@ -400,7 +431,8 @@ PROGRAM stm
     WRITE(10,"(1X,I4,5X,I3,5X,I4,1X,7F8.2)") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
         & tempWall(DOY), tempFloor(DOY), sumTempSlurry/24. 
 
-    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,6F15.0)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2dwall, Qslur2uwall, Qout
+    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,8F15.0)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2dwall, Qslur2uwall, Qfeed, Qout, &
+        & sumQout/24.
 
     WRITE(12,"(1X,I4,5X,I3,5X,I4,1X,2F15.0)") DOS, DOY, YR, tempAir(DOY), solRad(DOY)
     
