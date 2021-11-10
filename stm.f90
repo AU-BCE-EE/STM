@@ -79,7 +79,7 @@ PROGRAM stm
   REAL :: trigPartRad    ! Sine part of radiation expression
   
   ! Other slurry variables
-  REAL :: massSlurry, massFrozen = 0, dmassFrozen   ! Slurry mass (Mg = 1000 kg = metric tonnes)
+  REAL :: massSlurry, massFrozen = 0   ! Slurry mass (Mg = 1000 kg = metric tonnes)
   REAL :: slurryVol      ! Initial slurry volume (m3) NTS not consistent name
   REAL :: slurryProd     ! Slurry production rate (= inflow = outflow) (Mg/d)
 
@@ -98,7 +98,7 @@ PROGRAM stm
   REAL :: glSoil         ! Gradient length within soil (below floor and beside walls) in m
   REAL :: soilDamp       ! Soil damping depth, where averaging period reaches 1 full yr, in m
 
-  ! Heat flux variables in W out of slurry
+  ! Heat flow variables in W out of slurry
   REAL :: Qrad           ! "To" sun
   REAL :: Qslur2air      ! To air
   REAL :: Qslur2wall, Qslur2dwall, Qslur2uwall   ! Out through wall (to air or soil)
@@ -107,6 +107,10 @@ PROGRAM stm
   REAL :: Qout           ! Total
   REAL :: QoutPart       ! Total after some use for melting/freezing
   REAL :: sumQout        ! Sum of total for average
+
+  ! Heat flow total
+  REAL :: HH             ! Total heat flow out of slurry in a time step in J
+  REAL :: HHadj          ! Total adjusted for melting slurry in J
 
   LOGICAL :: calcWeather ! .TRUE. when weather inputs are calculated (otherwise read from file)
   LOGICAL :: warming     ! .TRUE. when slurry is warming over a time step
@@ -206,7 +210,7 @@ PROGRAM stm
 
   WRITE(11,*) 'Day of  Day of Year ' 
   WRITE(11,*) 'sim.     year               Qrad         Qslur2air     Qslur2floor      Qslur2dwall      Qslur2uwall &
-    &          Qfeed       Qout       Qoutave' 
+    &          Qfeed       Qout       Qoutave     HH   HHadj' 
 
   WRITE(12,*) 'Day of  Day of Year Air   Radiation'
   WRITE(12,*) 'sim.     year        T'
@@ -350,70 +354,44 @@ PROGRAM stm
       ! W
       Qslur2wall = Qslur2dwall + Qslur2uwall
       Qout = Qfeed + Qrad + Qslur2air + Qslur2wall + Qslur2floor
-      !                                J/s
-      !                 ---------------------------------------
-      ! K       J/s  *  s/h /(kg/t *  J/kg-K  *  t)         * h
-      dTemp = - Qout * 3600./(1000 * cpSlurry * massSlurry) * 1
+      ! HH in J
+      !J =  W   *  s/h  * h
+      HH = Qout * 3600. * 1.
 
-      ! Warming or cooling?
-      IF (Qout .GE. 0.0) THEN
-        warming = .FALSE.
-      ELSE 
-        warming = .TRUE.
-      END IF
+      ! Melt any frozen slurry
+      HHadj = HH + 1000. * massFrozen * hfSlurry
+      massFrozen = 0.0
 
-      ! NTS: Check freeze/thaw again
-      ! Assess thawing if any frozen slurry is present
-      ! Temperature should always be <= 0 here
-      IF (warming .AND. massFrozen .GT. 0.0) THEN ! Warming and ice is present
-        IF (dTemp .GT. 0.0 - tempSlurry) THEN ! There is enough heat to do some melting
-          ! First warm slurry to 0C
-          dTemp = 0.0 - tempSlurry
-          tempSlurry = 0.0
-          QoutPart = Qout + dTemp * 1000. * massSlurry * cpSlurry /  3600. / 1.
-          dmassFrozen = QoutPart * 3600. * 1. / hfSlurry / 1000.
-          ! Then melt
-          IF (-dmassFrozen .GE. massFrozen) THEN 
-            ! Melt all, with some dTemp left over, warming
-            massFrozen = 0.
-            QoutPart = QoutPart - massFrozen * 1000 * hfSlurry / 3600. / 1.
-            dTemp = - QoutPart * 3600./(1000 * cpSlurry * massSlurry) * 1
-          ELSE
-            ! Melt some, with no dTemp left over
-            massFrozen = massFrozen + dmassFrozen
-            dTemp = 0.0
-          END IF
-        ELSE ! 
-        END IF ! No melting, only heating toward 0C, use dTemp from above
-      ELSE IF (.NOT. warming) THEN ! Cooling, assess freezing
-        IF (tempSlurry + dTemp .LT. 0.0) THEN ! Some freezing, or at least some frozen slurry will remain
-          ! First cool (or warm, remember this is a lumped model) slurry to 0C
-          dTemp = 0.0 - tempSlurry
-          tempSlurry = 0.0
-          QoutPart = Qout + dTemp * 1000. * massSlurry * cpSlurry /  3600. / 1.
-          !                     J        /     J/t
-          !              --------------     ------------
-          !    t         J/s * s/h  * h  / J/kg   / kg/t 
-          dmassFrozen = QoutPart * 3600. * 1. / hfSlurry / 1000.
-          ! Then freeze as much as possible
-          IF (dmassFrozen .GE. massSlurry - massFrozen) THEN 
-            ! Freeze all remaining liquid slurry, with some dTemp left over, warming
-            QoutPart = QoutPart - (massSlurry - massFrozen) * 1000 * hfSlurry / 3600. / 1.
+      dTemp = - HHadj / (1000. * cpSlurry * massSlurry)
+
+      ! Freeze and thaw
+      IF (tempSlurry + dTemp .LT. 0.0) THEN
+        ! Use HH to get to 0.0
+        HHadj = HHadj - (0.0 - tempSlurry) * 1000. * cpSlurry * massSlurry
+        tempSlurry = 0.0
+
+        IF (HHadj .GT. 0.0) THEN
+          ! Still some cooling available for freezing
+          massFrozen = HHadj / hfSlurry / 1000.
+          IF (massFrozen .GE. massSlurry) THEN
+            ! More than enough to freeze all slurry
             massFrozen = massSlurry
-            dTemp = - QoutPart * 3600./(1000 * cpSlurry * massSlurry) * 1
+            HHadj = HHadj - 1000. * massFrozen * hfSlurry
           ELSE
-            ! Freeze some, with no dTemp left over
-            massFrozen = massFrozen + dmassFrozen
-            dTemp = 0.0
+            ! Only some freezes and temperature stays at 0C
+            ! massFrozen from above applies
+            HHadj = 0.0
           END IF
         END IF
       END IF
+
+      ! Recalculate dT
+      dTemp = - HHadj / (1000. * cpSlurry * massSlurry)
+      tempSlurry = tempSlurry + dTemp
       
       ! Steady-state temperature NTS: how to deal with freezing?
       tempSS = (uTop*tempAir(DOY)*areaAir + uFloor*tempFloor(DOY)*areaFloor + uDwall*tempWall(DOY)*areaDwall + &
         & uUwall*tempWall(DOY)*areaUwall - Qrad) / (uTop*areaAir + uFloor*areaFloor + uDwall*areaDwall + uUwall*areaUwall)
-
-      tempSlurry = tempSlurry + dTemp
       
       ! Limit change in temperature to change to SS temp
       IF (dTemp > 0. .AND. tempSlurry > tempSS) THEN
@@ -427,12 +405,11 @@ PROGRAM stm
 
     END DO
 
-
     WRITE(10,"(1X,I4,5X,I3,5X,I4,1X,7F8.2)") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
         & tempWall(DOY), tempFloor(DOY), sumTempSlurry/24. 
 
-    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,8F15.0)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2dwall, Qslur2uwall, Qfeed, Qout, &
-        & sumQout/24.
+    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,10F15.0)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2dwall, Qslur2uwall, Qfeed, Qout, &
+        & sumQout/24., HH, HHadj
 
     WRITE(12,"(1X,I4,5X,I3,5X,I4,1X,2F15.0)") DOS, DOY, YR, tempAir(DOY), solRad(DOY)
     
