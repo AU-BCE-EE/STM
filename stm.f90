@@ -361,13 +361,14 @@ PROGRAM stm
       ! Melt any frozen slurry
       HHadj = HH + 1000. * massFrozen * hfSlurry
       massFrozen = 0.0
+      WRITE(11,*) massFrozen, HH, HHadj
 
       dTemp = - HHadj / (1000. * cpSlurry * massSlurry)
 
       ! Freeze and thaw
       IF (tempSlurry + dTemp .LT. 0.0) THEN
         ! Use HH to get to 0.0
-        HHadj = HHadj - (0.0 - tempSlurry) * 1000. * cpSlurry * massSlurry
+        HHadj = HHadj + (0.0 - tempSlurry) * 1000. * cpSlurry * massSlurry
         tempSlurry = 0.0
 
         IF (HHadj .GT. 0.0) THEN
@@ -384,6 +385,7 @@ PROGRAM stm
           END IF
         END IF
       END IF
+      WRITE(11,*) massFrozen, HH, HHadj
 
       ! Recalculate dT
       dTemp = - HHadj / (1000. * cpSlurry * massSlurry)
