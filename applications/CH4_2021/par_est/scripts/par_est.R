@@ -90,7 +90,10 @@ p <- c(uAir = 50, glSlur = 0.3, glSoil = 0.3, absorp = 0.01)
 fixed <- c(glConc = 0.15, soilDamp = 4)
 
 m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas, fixed = fixed), method = 'Nelder-Mead')
-#m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
+
+# Used this last
+p <- c(uAir = 50, glSlur = 0.3, glConc = 1, glSoil = 0.3, absorp = 0.02, soilDamp = 3)
+m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
 
 m
 
