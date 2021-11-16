@@ -17,7 +17,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Days, and other integers
   INTEGER :: HR          ! Hour of day (1-24)
-  INTEGER :: DOY         ! Day of year (1 - 365)
+  INTEGER :: DOY, DOYprev         ! Day of year (1 - 365)
   INTEGER :: DOS         ! Day of simulation
   INTEGER :: YR          ! Relative year (1 + )
   INTEGER :: targetDOY   ! Day of year in target_temp.txt file
@@ -36,7 +36,7 @@ PROGRAM stm
   !!CHARACTER (LEN=1) :: ventType ! Type of ventilation
 
   ! File names
-  CHARACTER (LEN=30) :: userParFile, parFile, weatherFile
+  CHARACTER (LEN=30) :: userParFile, parFile, weatherFile, levelFile
 
   ! Command line arguments, length
   INTEGER :: numArgs
@@ -83,6 +83,10 @@ PROGRAM stm
   REAL :: slurryVol      ! Initial slurry volume (m3) NTS not consistent name
   REAL :: slurryProd     ! Slurry production rate (= inflow = outflow) (Mg/d)
 
+  ! Level variables
+  REAL, DIMENSION(365) :: level, rLevelAve
+  REAL :: levelPrev
+
   ! Heat transfer coefficients and related variables
   REAL :: uAir, uUwall, uDwall, uFloor, uTop ! Convective or effective heat transfer coefficient W/m2-K (J/s-m2-K) 
   REAL :: kSlur          ! Thermal conductivity of slurry in W/m-K
@@ -114,6 +118,7 @@ PROGRAM stm
 
   LOGICAL :: calcWeather ! .TRUE. when weather inputs are calculated (otherwise read from file)
   LOGICAL :: warming     ! .TRUE. when slurry is warming over a time step
+  LOGICAL :: fixedFill   ! .TRUE. when slurry is added at a fixed rate, specified in user par file
 
   ! Other parameters
   REAL, PARAMETER :: PI = 3.1415927
@@ -128,18 +133,29 @@ PROGRAM stm
     CALL GET_COMMAND_ARGUMENT(2, parFile)
     CALL GET_COMMAND_ARGUMENT(3, userParFile)
     calcWeather = .TRUE.
+    fixedFill = .TRUE.
   ELSE IF (numArgs .EQ. 4) THEN
     CALL GET_COMMAND_ARGUMENT(1, ID)
     CALL GET_COMMAND_ARGUMENT(2, parFile)
     CALL GET_COMMAND_ARGUMENT(3, userParFile)
     CALL GET_COMMAND_ARGUMENT(4, weatherFile)
     calcWeather = .FALSE.
+    fixedFill = .TRUE.
+  ELSE IF (numArgs .EQ. 5) THEN
+    CALL GET_COMMAND_ARGUMENT(1, ID)
+    CALL GET_COMMAND_ARGUMENT(2, parFile)
+    CALL GET_COMMAND_ARGUMENT(3, userParFile)
+    CALL GET_COMMAND_ARGUMENT(4, weatherFile)
+    CALL GET_COMMAND_ARGUMENT(5, levelFile)
+    calcWeather = .FALSE.
+    fixedFill = .FALSE.
   ELSE
     WRITE(*,*) 'No file names given so 2 default parameter files will be used, with calculated weather and ID 0001.'
     parFile = 'pars.txt'
     userParFile = 'user_pars.txt'
     ID = '0001'
     calcWeather = .TRUE.
+    fixedFill = .TRUE.
   END IF
 
 
@@ -151,6 +167,9 @@ PROGRAM stm
   OPEN (UNIT=2, FILE=parFile, STATUS='OLD')
   IF (.NOT. calcWeather) THEN
     OPEN (UNIT=3, FILE=weatherFile, STATUS='UNKNOWN')
+  END IF
+  IF (.NOT. fixedFill) THEN
+    OPEN (UNIT=4, FILE=levelFile, STATUS='UNKNOWN')
   END IF
 
   ! Output files, name based on ID
@@ -230,7 +249,7 @@ PROGRAM stm
   uUwall = 1./(1./uAir + glConc/kConc + glSlur/kSlur)
   uTop = 1./(1./uAir + glSlur/kSlur)
 
-  ! Determine airTemp, solRad, and substrate temperatures for a complete year
+  ! Determine tempAir, solRad, and substrate temperatures for a complete year
   ! Start day loop
   IF (calcWeather) THEN
     DO DOY = 1,365,1
@@ -298,6 +317,37 @@ PROGRAM stm
     END DO
   END IF
 
+  ! Reading in level
+  ! Set all to NA value
+  level = -99.
+  IF (.NOT. fixedFill) THEN
+    READ(4,*,IOSTAT=fileStat) ! Header
+    READ(4,*) DOY, level(1)
+    levelPrev = level(1)
+    IF (DOY .NE. 1.) THEN
+      WRITE(*,*) "First day of year *must* be 1 in level file! Stopping."
+      STOP
+    END IF
+    DOYprev = 1
+    level(365) = level(1)
+    DO WHILE (.NOT. IS_IOSTAT_END(fileStat))
+      READ(4,*,IOSTAT=fileStat) DOY, level(DOY)
+      rLevelAve(DOYprev) = (level(DOY) - levelPrev) / (DOY - DOYprev)
+      DOYprev = DOY
+      levelPrev = level(DOY)
+    END DO
+    rLevelAve(DOY) = (level(365) - levelPrev) / (365 - DOYprev)
+
+    ! Fill in missing levels, linear interpolation
+    DO DOY = 2,365,1
+      IF (level(DOY) .LT. 0) THEN
+        level(DOY) = level(DOY - 1) + rLevelAve(DOY - 1) * 1.
+        rLevelAve(DOY) = rLevelAve(DOY - 1)
+      END IF
+    END DO
+
+  END IF
+
   ! Set initial slurry temperature
   tempSlurry = tempInitial
 
@@ -316,16 +366,35 @@ PROGRAM stm
       YR = YR + 1
     END IF
 
-    ! Empty and add slurry at beginning of day
-    IF (DOY == emptyDOY1 .OR. DOY == emptyDOY2) THEN
-      massSlurry = residMass
-      IF (massFrozen .GT. massSlurry) THEN
-        massFrozen = massSlurry
+    ! Sort out filling rate or fixed emptying
+    ! Assumes given level is for end of day
+    IF (.NOT. fixedFill) THEN
+      IF (level(DOY) .GT. levelPrev) THEN
+        ! NTS: some inconsistency about slurry level defined at beginning or end of day
+        massSlurry = level(DOY) * areaFloor * dSlurry/1000.
+        ! Hourly slurry addition
+        slurryProd = (level(DOY) - levelPrev) * areaFloor * dSlurry/1000.
+      ELSE IF (level(DOY) .LT. levelPrev) THEN
+        ! Removal, so fixed slurry mass
+        massSlurry = level(DOY) * areaFloor * dSlurry/1000.
+        slurryProd = 0.0
+        IF (massFrozen .GT. massSlurry) THEN
+          massFrozen = massSlurry
+        END IF
+      END IF
+      levelPrev = level(DOY)
+    ELSE
+      ! Empty and add slurry at beginning of day
+      IF (DOY == emptyDOY1 .OR. DOY == emptyDOY2) THEN
+        massSlurry = residMass
+        IF (massFrozen .GT. massSlurry) THEN
+          massFrozen = massSlurry
+        END IF
       END IF
     END IF
 
     ! Get depth and wall area
-    slurryDepth = 1000 * massSlurry / (dSlurry*width*length*nchannels)  ! Slurry depth in m
+    slurryDepth = 1000 * massSlurry / (dSlurry*areaFloor)  ! Slurry depth in m
     areaDwall = MIN(slurryDepth, buriedDepth) * 2. * (length + width) * nChannels
     areaUwall = MAX(slurryDepth - buriedDepth, 0.) * 2. * (length + width) * nChannels
 
