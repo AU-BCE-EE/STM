@@ -7,7 +7,7 @@ library(lubridate)
 dat <- read.csv('meas_temp/Sweden_storage_temp.csv')
 dat$date.time <- ymd_hm(dat$date.time)
 dat$date <- as.POSIXct(substr(dat$date.time, 1, 10))
-dat$height <- paste(dat$height, ' m')
+dat$depth <- paste(dat$depth, ' m')
 
 # Fix site
 dat$site <- substr(dat$site, 1, 4)
@@ -69,7 +69,7 @@ ggplot(dm, aes(date, temp)) +
   theme(legend.position = 'top')
 ggsave('plots/ave_stor_temp_4.png', height = 6, width = 8)
 
-ggplot(dat, aes(date.time, temp, colour = factor(height))) +
+ggplot(dat, aes(date.time, temp, colour = factor(depth))) +
   geom_line(aes(date, temp.air), colour = 'skyblue', lty = 1) +
   geom_line() +
   geom_line(aes(date, temp.slurry), colour = 'black') +
@@ -79,7 +79,7 @@ ggplot(dat, aes(date.time, temp, colour = factor(height))) +
   theme(legend.position = 'top')
 ggsave('plots/stor_temp_4.png', height = 6, width = 8)
 
-ggplot(dat, aes(date, depth.slurry)) +
+ggplot(dm, aes(date, depth.slurry)) +
   geom_line() +
   facet_wrap(~ site) +
   labs(x = 'Date', y = 'Slurry depth (m)', 
@@ -87,7 +87,7 @@ ggplot(dat, aes(date, depth.slurry)) +
   theme(legend.position = 'top')
 ggsave('plots/slurry_depth_4.png', height = 6, width = 8)
 
-ggplot(dat, aes(date, mass.slurry)) +
+ggplot(dm, aes(date, mass.slurry)) +
   geom_line() +
   facet_wrap(~ site) +
   labs(x = 'Date', y = 'Slurry mass (Mg)', 
