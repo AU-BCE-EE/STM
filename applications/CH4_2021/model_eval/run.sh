@@ -3,10 +3,11 @@
 sim_start_time="$SECONDS"
 
 # Run all simulations in parallel
-./stm Back pars/pars.txt pars/Back_user_pars.txt weather/weather.txt&
-./stm Fitt pars/pars.txt pars/Fitt_user_pars.txt weather/weather.txt &
-./stm Lind pars/pars.txt pars/Lind_user_pars.txt weather/weather.txt &
-./stm Raan pars/pars.txt pars/Raan_user_pars.txt weather/weather.txt
+./stm Back pars/pars.txt pars/Back_user_pars.txt weather/Uppsala_weather.txt &
+./stm Fitt pars/pars.txt pars/Fitt_user_pars.txt weather/Uppsala_weather.txt &
+./stm Lind pars/pars.txt pars/Lind_user_pars.txt weather/Uppsala_weather.txt &
+./stm Raan pars/pars.txt pars/Raan_user_pars.txt weather/Uppsala_weather.txt &
+./stm Tjel pars/pars.txt pars/Tjel_user_pars.txt weather/Tjele_weather.txt 
 
 sim_end_time="$SECONDS"
 
