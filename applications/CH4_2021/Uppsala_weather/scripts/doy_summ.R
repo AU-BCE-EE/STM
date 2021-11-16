@@ -15,13 +15,13 @@ dat$year <- as.integer(as.character(dat$date.time, format = '%Y'))
 dat$date <- date(dat$date.time)
 
 # Subset
-dat <- subset(dat$date >= ymd('2020 05 01') & dat$date <= ymd('2021 05 31'))
+dat <- subset(dat, date >= ymd('2020 05 01') & date <= ymd('2021 05 31'))
 
 # Summarize by doy
 mns <- aggregate(dat[, c('temp.1.5m', 'rad')], dat[, c('doy'), drop = FALSE], mean)
 yrs <- aggregate(dat[, c('year')], dat[, c('doy'), drop = FALSE], function(x) x[1])
 ns <- aggregate(dat[, c('temp.1.5m')], dat[, c('doy'), drop = FALSE], function(x) length(x))
-datd <- merge(yrs, mns, by = 'doy')
+datd <- merge(mns, yrs, by = 'doy')
 datd <- rounddf(datd, 3, signif)
 
 # Check n
