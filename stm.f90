@@ -272,8 +272,8 @@ PROGRAM stm
   END IF
 
   ! Substrate temperature based on moving average
-  wallAvePeriod = wallDepth/soilDamp*365
-  floorAvePeriod = buriedDepth/soilDamp*365
+  wallAvePeriod = MAX(wallDepth/soilDamp*365, 1.)
+  floorAvePeriod = MAX(buriedDepth/soilDamp*365, 1.)
 
   ! Calculate moving average for first day of year
   ! Wall first
@@ -281,7 +281,7 @@ PROGRAM stm
     DO DOY = 1,365,1
       tempWall(DOY) = (minAnnTemp + maxAnnTemp)/2.
     END DO
-  ELSE 
+  ELSE IF (wallAvePeriod > 1) THEN
     ! First need to calculate value for DOY = 1
     tempWall(1) = 0
     DO DOY = 365 - wallAvePeriod + 2,365,1
@@ -295,6 +295,8 @@ PROGRAM stm
         tempWall(DOY) = tempWall(DOY - 1) - tempAir(365 + DOY - wallAvePeriod)/wallAvePeriod + tempAir(DOY)/wallAvePeriod
       END IF 
     END DO
+  ELSE
+    tempWall(:) = tempAir(:)
   END IF
 
   ! Then floor
