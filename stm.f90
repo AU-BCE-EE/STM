@@ -1,6 +1,6 @@
 PROGRAM stm
 
-  ! Simple temperature model for slurry in channels or pits in a barn
+  ! Simple temperature model for slurry in stores or pits in a barn
   ! Date           Who                         Description
   ! 28 FEB 2015   S. Hafner                    Original code (stole some from tmad.f90)
   ! 01 MAR 2015   S. Hafner                    Added calculation of substrate temperatures and heat transfer coefficients
@@ -42,7 +42,7 @@ PROGRAM stm
   INTEGER :: numArgs
 
   ! Temperatures, all in degrees C
-  REAL, DIMENSION(365) :: tempAir, tempFloor, tempWall ! Air, floor (bottom of channel or pit), and wall (side of channel or pit)
+  REAL, DIMENSION(365) :: tempAir, tempFloor, tempWall ! Air, floor (bottom of store or pit), and wall (side of store or pit)
   REAL :: tempSum        ! 24 h temperature sum for calculating daily average
   REAL :: dTemp          ! Change in temperature during time step (deg. C) 
   REAL :: tempTarget     ! Target temperature for a particular period when heated
@@ -54,21 +54,21 @@ PROGRAM stm
   REAL :: tempSlurryH0   ! Slurry temperature at start of day (used for Qfeed calc)
   REAL :: tempSS         ! Steady-state slurry temperature used to deal with numerical instability
   REAL :: sumTempSlurry  ! Sum of hourly slurry temperatures for calculating daily mean
-  REAL :: tempIn         ! Temperature of slurry when added to channel/pit/tank/lagoon
+  REAL :: tempIn         ! Temperature of slurry when added to store/pit/tank/lagoon
   REAL :: trigPartTemp   ! Sine part of temperature expression
   REAL :: residMass      ! Mass of slurry left behind when emptying
 
   ! Geometry of storage structure
-  REAL :: slurryDepth    ! Depth of slurry in channel/pit (m)
-  REAL :: channelDepth   ! Total depth of channel/pit (m)
+  REAL :: slurryDepth    ! Depth of slurry in store/pit (m)
+  REAL :: storeDepth   ! Total depth of store/pit (m)
   REAL :: buriedDepth    ! Buried depth (m)
   REAL :: wallDepth      ! Depth at which horizontal heat transfer to soil is evaluated (m) 
-  REAL :: length, width  ! Length and width of channel/pit (m)
+  REAL :: length, width  ! Length and width of store/pit (m)
   REAL :: areaFloor      ! Storage floor area in contact with soil (m2)
   REAL :: areaDwall      ! Storage wall area (D for down) in contact with soil (buried) (m2)
   REAL :: areaUwall      ! Storage wall area (U for upper) in contact with air (above ground) (outside) and slurry (inside) (m2)
   REAL :: areaAir        ! Slurry upper surface area (m2)
-  INTEGER :: nChannels   ! Number of channels or pits
+  INTEGER :: nStores   ! Number of stores or pits
 
   ! Solar
   REAL :: areaSol        ! Area intercepting solar radiation (m2) 
@@ -174,12 +174,12 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Read parameters
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! User parameters
+  ! User settings
   READ(1,*)
   READ(1,*) nDays
   READ(1,*) startingDOY
-  READ(1,*) nChannels
-  READ(1,*) channelDepth
+  READ(1,*) nStores
+  READ(1,*) storeDepth
   READ(1,*) buriedDepth
   READ(1,*) length
   READ(1,*) width
@@ -187,17 +187,19 @@ PROGRAM stm
   READ(1,*) areaSol
   READ(1,*) slurryVol
   READ(1,*) tempInitial
-  READ(1,*) minAnnTemp
-  READ(1,*) maxAnnTemp 
-  READ(1,*) hottestDOY
-  READ(1,*) minAnnRad
-  READ(1,*) maxAnnRad 
-  READ(1,*) raddestDOY
+  READ(1,*) tempIn
   READ(1,*) slurryProd
   READ(1,*) residMass
-  READ(1,*) tempIn
   READ(1,*) emptyDOY1
   READ(1,*) emptyDOY2 
+  READ(1,*)
+  READ(1,*)
+  READ(1,*)
+  READ(1,*)
+  READ(1,*) minAnnTemp, maxAnnTemp, hottestDOY
+  READ(1,*)
+  READ(1,*)
+  READ(1,*) minAnnRad, maxAnnRad, raddestDOY
 
   ! Other parameters
   READ(2,*) 
@@ -235,7 +237,7 @@ PROGRAM stm
     areaFloor = 3.1416 * (length / 2.)**2   ! m2
   ELSE 
     ! Rectangular
-    areaFloor = width*length*nChannels      ! m2
+    areaFloor = width*length*nStores      ! m2
   END IF
   massSlurry = slurryVol * dSlurry / 1000 ! Slurry mass is in metric tonnes = Mg = 1000 kg
 
@@ -391,8 +393,14 @@ PROGRAM stm
 
     ! Get depth and wall area
     slurryDepth = 1000 * massSlurry / (dSlurry*areaFloor)  ! Slurry depth in m
-    areaDwall = MIN(slurryDepth, buriedDepth) * 2. * (length + width) * nChannels
-    areaUwall = MAX(slurryDepth - buriedDepth, 0.) * 2. * (length + width) * nChannels
+    areaDwall = MIN(slurryDepth, buriedDepth) * 2. * (length + width) * nStores
+    areaUwall = MAX(slurryDepth - buriedDepth, 0.) * 2. * (length + width) * nStores
+
+    ! Check slurry depth
+    IF (slurryDepth .GT. storeDepth) THEN
+      WRITE(*,*) "Slurry depth is greater than maximum depth! Stopping. Check inputs."
+      STOP
+    END IF
 
     ! Radiation fixed for day (W = J/s)
     Qrad = - absorp * solRad(DOY) * areaSol

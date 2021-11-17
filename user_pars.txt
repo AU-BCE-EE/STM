@@ -1,23 +1,26 @@
-User-specified parameters for STM model
-1095      Number of days in simulation (nDays)
-1         Starting day of simulation as day of year (1-365) (startingDOY)
-1         Number of tanks (nChannels)
-4         Total depth (m) (channelDepth)
-2         Buried depth (to bottom) (m) (buriedDepth)
-22        Length or diameter of tank (m) (length)
-22        Width of tank (m) (set to 0 for circular tanks) (width)
-484       Effective slurry-to-air convection area (m2) (areaAir)
-484       Effective solar (normal) area (m2)  (areaSol)
-100       Initial volume of slurry (m3) (slurrryVol)
-15        Initial slurry temperature (tempInitial)
--3        Minimum daily average air temperature (degrees C) (minAnnTemp)
-18        Maximum daily average air temperature (degrees C) (maxAnnTemp)
-210       Hottest day of year (integer) (hottestDOY)
--3        Minimum daily average radiation (W/m2) (minAnnRad)
-246       Maximum daily average radiation (W/m2) (maxAnnRad)
-172       Day of year with most radiation (integer) (raddestDOY)
-6.2       Slurry addition rate (tonnes/d) (slurryProd)
-100       Residual slurry mass left when emptying (tonnes or m3) (residMass)
-15        Slurry temperature (deg. C) (tempIn)
-56        Emptying DOY 1 (emptyDOY1)
-240       Emptying DOY 2 (emptyDOY2)
+Settings for STM heat transfer model
+1095      Duration of simulation (days)
+1         Starting day of simulation as day of year (1-365, no leap years)
+1         Number of identical storages
+4         Total (maximum) depth (m)
+2         Buried depth (to bottom) (m)
+22        Dimension 1 of tank (length or diameter) (m)
+22        Dimension 2 of tank (width or set to 0 for circular tanks) (m)
+484       Effective slurry-to-air convection area (m2) (usually simply upper exposed area)
+484       Effective area exposed to solar radiation (m2)
+100       Initial volume of slurry (m3) (ignored if using level file)
+15        Initial slurry temperature (degrees C)
+15        Temperature of added slurry (degrees C)
+6.2       Slurry addition rate (tonnes/d) (ignored if using level file)
+100       Residual slurry mass left when emptying (tonnes or m3) (ignored if using level file)
+56        Emptying day of year
+240       Emptying day of year
+
+Weather curve parameter for STM heat transfer model (not read if using level file)
+Daily average air temperature (degrees C)
+  Minimum      Maximum       Day of year of maximum
+    -3            18              210
+Daily average global solar radiation (W/m2)
+  Minimum      Maximum       Day of year of maximum
+     3           246              246
+
