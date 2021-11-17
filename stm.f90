@@ -192,14 +192,17 @@ PROGRAM stm
   READ(1,*) residMass
   READ(1,*) emptyDOY1
   READ(1,*) emptyDOY2 
-  READ(1,*)
-  READ(1,*)
-  READ(1,*)
-  READ(1,*)
-  READ(1,*) minAnnTemp, maxAnnTemp, hottestDOY
-  READ(1,*)
-  READ(1,*)
-  READ(1,*) minAnnRad, maxAnnRad, raddestDOY
+
+  IF (calcWeather) THEN
+    READ(1,*)
+    READ(1,*)
+    READ(1,*)
+    READ(1,*)
+    READ(1,*) minAnnTemp, maxAnnTemp, hottestDOY
+    READ(1,*)
+    READ(1,*)
+    READ(1,*) minAnnRad, maxAnnRad, raddestDOY
+  END IF
 
   ! Other parameters
   READ(2,*) 
@@ -393,8 +396,15 @@ PROGRAM stm
 
     ! Get depth and wall area
     slurryDepth = 1000 * massSlurry / (dSlurry*areaFloor)  ! Slurry depth in m
-    areaDwall = MIN(slurryDepth, buriedDepth) * 2. * (length + width) * nStores
-    areaUwall = MAX(slurryDepth - buriedDepth, 0.) * 2. * (length + width) * nStores
+    IF (width .EQ. 0.) THEN
+      ! Circular
+      areaDwall = MIN(slurryDepth, buriedDepth) * 3.1416 * length * nStores
+      areaUwall = MAX(slurryDepth - buriedDepth, 0.) * 3.1416 * length * nStores
+    ELSE 
+      ! Rectangular
+      areaDwall = MIN(slurryDepth, buriedDepth) * 2. * (length + width) * nStores
+      areaUwall = MAX(slurryDepth - buriedDepth, 0.) * 2. * (length + width) * nStores
+    END IF
 
     ! Check slurry depth
     IF (slurryDepth .GT. storeDepth) THEN

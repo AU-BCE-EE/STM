@@ -13,8 +13,8 @@ Settings for STM heat transfer model
 15        Temperature of added slurry (degrees C)
 6.2       Slurry addition rate (tonnes/d) (ignored if using level file)
 100       Residual slurry mass left when emptying (tonnes or m3) (ignored if using level file)
-56        Emptying day of year
-240       Emptying day of year
+56        Emptying day of year (ignored if using level file)
+240       Emptying day of year (ignored if using level file) 
 
 Weather curve parameter for STM heat transfer model (not read if using level file)
 Daily average air temperature (degrees C)
