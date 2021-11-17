@@ -1,15 +1,12 @@
-Transport-related parameters for STM model
-51.5183407901266      uAir (W/m2-K)
-0.6       kSlur (W/m-K)
-1.0       kConc (W/m-K)
-2.0       kSoil (W/m-K)
-1000      cpConc (J/kg-K)
-4200      cpSlurry (J/kg-K)
-333550    hfSlurry (J/kg)
-2300      dConc (kg/m3)
-1000      dSlurry (kg/m3)
-0.418264595503019    glSlur (m)
-0.15    glConc (m)
-4.32815235958729    glSoil (m)
-0.0262928552194979    absorp (-) 
-4  soilDamp (m)
+Parameter values for STM heat transfer model
+1. Slurry physical constants
+  Density  Specific heat  Heat of fusion 
+  (kg/m3)    (J/kg-K)        (J/kg)
+   1000        4200          333550
+2. Heat transfer resistance terms (K-m2/W)
+  Air  Concrete   Slurry   Soil
+  0.02   0.15      0.71    2.0
+3. Others
+ Absorptivity  Soil damping depth
+    (-)              (m)
+   0.026             4.0

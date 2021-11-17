@@ -88,18 +88,11 @@ PROGRAM stm
   REAL :: levelPrev
 
   ! Heat transfer coefficients and related variables
-  REAL :: uAir, uUwall, uDwall, uFloor, uTop ! Convective or effective heat transfer coefficient W/m2-K (J/s-m2-K) 
-  REAL :: kSlur          ! Thermal conductivity of slurry in W/m-K
-  REAL :: kConc          ! Thermal conductivity of concrete in W/m-K
-  REAL :: kSoil          ! Thermal conductivity of soil in W/m-K
-  REAL :: cpConc         ! Heat capacity of concrete J/kg-K
+  REAL :: Rair, Rconc, Rslur, Rsoil ! Entered resistance terms K-m2/W
+  REAL :: Ruwall, Rdwall, Rfloor, Rtop ! Calculated resistance K-m2/W 
   REAL :: cpSlurry       ! Heat capacity of slurry J/kg-K
   REAL :: hfSlurry       ! Latent heat of fusion of slurry J/kg
-  REAL :: dConc          ! Density of concrete kg/m3
   REAL :: dSlurry        ! Density of slurry kg/m3
-  REAL :: glConc         ! Gradient length within concrete substrate in m
-  REAL :: glSlur         ! Gradient length within slurry in m
-  REAL :: glSoil         ! Gradient length within soil (below floor and beside walls) in m
   REAL :: soilDamp       ! Soil damping depth, where averaging period reaches 1 full yr, in m
 
   ! Heat flow variables in W out of slurry
@@ -208,20 +201,17 @@ PROGRAM stm
 
   ! Other parameters
   READ(2,*) 
-  READ(2,*) uAir
-  READ(2,*) kSlur
-  READ(2,*) kConc
-  READ(2,*) kSoil
-  READ(2,*) cpConc
-  READ(2,*) cpSlurry
-  READ(2,*) hfSlurry
-  READ(2,*) dConc
-  READ(2,*) dSlurry
-  READ(2,*) glSlur
-  READ(2,*) glConc
-  READ(2,*) glSoil
-  READ(2,*) absorp
-  READ(2,*) soilDamp
+  READ(2,*) 
+  READ(2,*) 
+  READ(2,*) 
+  READ(2,*) dSlurry, cpSlurry, hfSlurry
+  READ(2,*) 
+  READ(2,*) 
+  READ(2,*) Rair, Rconc, Rslur, Rsoil
+  READ(2,*) 
+  READ(2,*) 
+  READ(2,*) 
+  READ(2,*) absorp, soilDamp
 
   ! Output file header
   WRITE(10,*) 'Day of  Day of    Year   Slurry  Frozen  Slurry   Air    Wall   Floor    Slurry'
@@ -239,15 +229,21 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Calculate some geometry-related variables
-  wallDepth = 0.5 * buriedDepth           ! m
-  areaFloor = width*length*nChannels      ! m2
-  massSlurry = slurryVol * dSlurry / 1000 ! Slurry mass is in Mg = 1000 kg
+  wallDepth = 0.5 * buriedDepth             ! m
+  IF (width .EQ. 0.) THEN
+    ! Circular
+    areaFloor = 3.1416 * (length / 2.)**2   ! m2
+  ELSE 
+    ! Rectangular
+    areaFloor = width*length*nChannels      ! m2
+  END IF
+  massSlurry = slurryVol * dSlurry / 1000 ! Slurry mass is in metric tonnes = Mg = 1000 kg
 
-  ! Heat transfer coefficients (W/m2-K)
-  uFloor = 1./(glConc/kConc + glSlur/kSlur)
-  uDwall = 1./(glSoil/kSoil + glConc/kConc + glSlur/kSlur)
-  uUwall = 1./(1./uAir + glConc/kConc + glSlur/kSlur)
-  uTop = 1./(1./uAir + glSlur/kSlur)
+  ! Heat transfer resistance terms R' (K-m2/W)
+  Rfloor = Rslur + Rconc + Rsoil
+  Rdwall = Rslur + Rconc + Rsoil 
+  Ruwall = Rslur + Rconc + Rair
+  Rtop = Rslur + Rair 
 
   ! Determine tempAir, solRad, and substrate temperatures for a complete year
   ! Start day loop
@@ -416,10 +412,10 @@ PROGRAM stm
       ! J/s               K           kg/t      t/d     / s/d    *  J/kg-K   
       Qfeed = (tempSlurry - tempIn) * 1000 * slurryProd / 86400. * cpSlurry
       ! J/s   J/s-m2-K     K               K          m2
-      Qslur2air = uTop*(tempSlurry - tempAir(DOY))*areaAir
-      Qslur2floor = uFloor*(tempSlurry - tempFloor(DOY))*areaFloor
-      Qslur2dwall = uDwall*(tempSlurry - tempWall(DOY))*areaDwall
-      Qslur2uwall = uUwall*(tempSlurry - tempAir(DOY))*areaUwall
+      Qslur2air = (tempSlurry - tempAir(DOY)) / Rtop * areaAir
+      Qslur2floor = (tempSlurry - tempFloor(DOY)) / Rfloor * areaFloor
+      Qslur2dwall = (tempSlurry - tempWall(DOY)) / Rdwall * areaDwall
+      Qslur2uwall = (tempSlurry - tempAir(DOY)) / Ruwall * areaUwall
       ! W
       Qslur2wall = Qslur2dwall + Qslur2uwall
       Qout = Qfeed + Qrad + Qslur2air + Qslur2wall + Qslur2floor
@@ -461,8 +457,8 @@ PROGRAM stm
       tempSlurry = tempSlurry + dTemp
       
       ! Steady-state temperature NTS: how to deal with freezing?
-      tempSS = (uTop*tempAir(DOY)*areaAir + uFloor*tempFloor(DOY)*areaFloor + uDwall*tempWall(DOY)*areaDwall + &
-        & uUwall*tempWall(DOY)*areaUwall - Qrad) / (uTop*areaAir + uFloor*areaFloor + uDwall*areaDwall + uUwall*areaUwall)
+      tempSS = (tempAir(DOY)/Rtop*areaAir + tempFloor(DOY)/Rfloor*areaFloor + tempWall(DOY)/Rdwall*areaDwall + &
+        & tempWall(DOY)/Ruwall*areaUwall - Qrad) / (areaAir/Rtop + areaFloor/Rfloor + areaDwall/Rdwall + areaUwall/Ruwall)
       
       ! Limit change in temperature to change to SS temp
       IF (dTemp > 0. .AND. tempSlurry > tempSS) THEN
