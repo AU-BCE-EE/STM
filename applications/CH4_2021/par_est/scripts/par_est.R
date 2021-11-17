@@ -91,42 +91,44 @@ p <- c(Rair = 0.04, Rconc = 1.3, Rslur = 0.6, Rsoil = 0.8, absorp = 0.03, soilDa
 m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
 m
 
+m1 <- m
 
-p <- c(Rair = 0.02, Rconc = 0.15, Rslur = 0.7, Rsoil = 1.0, absorp = 0.02, soilDamp = 1)
-p <- abs(m$par)
-mb <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'L-BFGS-B', 
-            lower = c(Rair = 0.001, Rconc = 0.001, Rslur = 0.001, Rsoil = 0.001, absorp = 0.0, soilDamp = 0.1),
-            upper = c(Rair = 10, Rconc = 10, Rslur = 10, Rsoil = 10, absorp = 1.0, soilDamp = 6))
-mb
 
-p <- c(uAir = 50, glSlur = 0.3, glConc = 1, glSoil = 0.3, absorp = 0.01, soilDamp = 3)
-p <- c(uAir = 50, glSlur = 0.3, glConc = 1, glSoil = 0.3, absorp = 0.01)
-p <- c(glSlur = 3, glConc = 0.3, glSoil = 0.3, absorp = 0.01)
-fixed <- c(soilDamp = 6, uAir = 50)
-fixed <- c(soilDamp = 6, uAir = 50)
-
-#p <- c(uAir = 100, glConc = 1, glSlur = 0.3, absorp = 0.01, soilDamp = 3)
-
-# Optimize
-p <- c(glSlur = 0.3, glSoil = 0.3, absorp = 0.01)
-fixed <- c(uAir = 50, glConc = 0.15, soilDamp = 4)
-p <- c(uAir = 50, glSlur = 0.3, glSoil = 0.3, absorp = 0.01)
-fixed <- c(glConc = 0.15, soilDamp = 4)
-
-m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas, fixed = fixed), method = 'Nelder-Mead')
-mm <- m
-
-# Used this last
-p <- c(uAir = 50, glSlur = 0.3, glConc = 1, glSoil = 0.3, absorp = 0.02, soilDamp = 3)
-m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
-
-m
-mm
-
-p <- c(glSlur = 0.3, glSoil = 0.3, absorp = 0.01)
-fixed <- c(uAir = 50, glConc = 0.15, soilDamp = 4)
-mb <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas, fixed = fixed), method = 'L-BFGS-B', 
-            lower = c(uAir = 1, glSlur = 0.01, glConc = 0.01, glSoil = 0.01, absorp = 0, soilDamp = 0.1),
-            upper = c(uAir = 500, glSlur = 3, glConc = 3, glSoil = 0.01, absorp = 1.0, soilDamp = 10))
-
-mb
+##p <- c(Rair = 0.02, Rconc = 0.15, Rslur = 0.7, Rsoil = 1.0, absorp = 0.02, soilDamp = 1)
+##p <- abs(m$par)
+##mb <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'L-BFGS-B', 
+##            lower = c(Rair = 0.001, Rconc = 0.001, Rslur = 0.001, Rsoil = 0.001, absorp = 0.0, soilDamp = 0.1),
+##            upper = c(Rair = 10, Rconc = 10, Rslur = 10, Rsoil = 10, absorp = 1.0, soilDamp = 6))
+##mb
+##
+##p <- c(uAir = 50, glSlur = 0.3, glConc = 1, glSoil = 0.3, absorp = 0.01, soilDamp = 3)
+##p <- c(uAir = 50, glSlur = 0.3, glConc = 1, glSoil = 0.3, absorp = 0.01)
+##p <- c(glSlur = 3, glConc = 0.3, glSoil = 0.3, absorp = 0.01)
+##fixed <- c(soilDamp = 6, uAir = 50)
+##fixed <- c(soilDamp = 6, uAir = 50)
+##
+###p <- c(uAir = 100, glConc = 1, glSlur = 0.3, absorp = 0.01, soilDamp = 3)
+##
+### Optimize
+##p <- c(glSlur = 0.3, glSoil = 0.3, absorp = 0.01)
+##fixed <- c(uAir = 50, glConc = 0.15, soilDamp = 4)
+##p <- c(uAir = 50, glSlur = 0.3, glSoil = 0.3, absorp = 0.01)
+##fixed <- c(glConc = 0.15, soilDamp = 4)
+##
+##m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas, fixed = fixed), method = 'Nelder-Mead')
+##mm <- m
+##
+### Used this last
+##p <- c(uAir = 50, glSlur = 0.3, glConc = 1, glSoil = 0.3, absorp = 0.02, soilDamp = 3)
+##m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
+##
+##m
+##mm
+##
+##p <- c(glSlur = 0.3, glSoil = 0.3, absorp = 0.01)
+##fixed <- c(uAir = 50, glConc = 0.15, soilDamp = 4)
+##mb <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas, fixed = fixed), method = 'L-BFGS-B', 
+##            lower = c(uAir = 1, glSlur = 0.01, glConc = 0.01, glSoil = 0.01, absorp = 0, soilDamp = 0.1),
+##            upper = c(uAir = 500, glSlur = 3, glConc = 3, glSoil = 0.01, absorp = 1.0, soilDamp = 10))
+##
+##mb
