@@ -57,6 +57,7 @@ PROGRAM stm
   REAL :: tempIn         ! Temperature of slurry when added to store/pit/tank/lagoon
   REAL :: trigPartTemp   ! Sine part of temperature expression
   REAL :: residMass      ! Mass of slurry left behind when emptying
+  REAL :: soilFreezeDiv  ! Fudge factor for soil freezing
 
   ! Geometry of storage structure
   REAL :: slurryDepth    ! Depth of slurry in store/pit (m)
@@ -233,6 +234,9 @@ PROGRAM stm
   ! Initial calculations
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+  ! Hard-wired parameters
+  soilFreezeDiv = 1.
+
   ! Calculate some geometry-related variables
   wallDepth = 0.5 * buriedDepth             ! m
   IF (width .EQ. 0.) THEN
@@ -288,7 +292,7 @@ PROGRAM stm
       tempWall(1) = tempWall(1) + tempAir(DOY)/wallAvePeriod
     END DO
     IF (tempWall(1) .LT. 0.) THEN
-      tempWall(1) = tempWall(1) / 2.
+      tempWall(1) = tempWall(1) / soilFreezeDiv
     END IF
 
     DO DOY = 2,365,1
@@ -298,11 +302,16 @@ PROGRAM stm
         tempWall(DOY) = tempWall(DOY - 1) - tempAir(365 + DOY - wallAvePeriod)/wallAvePeriod + tempAir(DOY)/wallAvePeriod
       END IF 
       IF (tempWall(DOY) .LT. 0.) THEN
-        tempWall(DOY) = tempWall(DOY) / 2.
+        tempWall(DOY) = tempWall(DOY) / soilFreezeDiv
       END IF
     END DO
   ELSE
     tempWall(:) = tempAir(:)
+    DO DOY = 1,365,1
+      IF (tempWall(DOY) .LT. 0.) THEN
+        tempWall(DOY) = tempWall(DOY) / soilFreezeDiv
+      END IF
+    END DO
   END IF
 
   ! Then floor
@@ -317,7 +326,7 @@ PROGRAM stm
       tempFloor(1) = tempFloor(1) + tempAir(DOY)/floorAvePeriod
     END DO
     IF (tempFloor(1) .LT. 0.) THEN
-      tempFloor(1) = tempFloor(1) / 2.
+      tempFloor(1) = tempFloor(1) / soilFreezeDiv
     END IF
 
     DO DOY = 2,365,1
@@ -327,7 +336,7 @@ PROGRAM stm
         tempFloor(DOY) = tempFloor(DOY - 1) - tempAir(365 + DOY - floorAvePeriod)/floorAvePeriod + tempAir(DOY)/floorAvePeriod
       END IF 
       IF (tempFloor(DOY) .LT. 0.) THEN
-        tempFloor(DOY) = tempFloor(DOY) / 2.
+        tempFloor(DOY) = tempFloor(DOY) / soilFreezeDiv
       END IF
     END DO
   END IF
@@ -458,7 +467,6 @@ PROGRAM stm
       ! Melt any frozen slurry
       HHadj = HH + 1000. * massFrozen * hfSlurry
       massFrozen = 0.0
-      WRITE(11,*) massFrozen, HH, HHadj
 
       dTemp = - HHadj / (1000. * cpSlurry * massSlurry)
 
@@ -482,7 +490,6 @@ PROGRAM stm
           END IF
         END IF
       END IF
-      WRITE(11,*) massFrozen, HH, HHadj
 
       ! Recalculate dT
       dTemp = - HHadj / (1000. * cpSlurry * massSlurry)

@@ -15,6 +15,9 @@ measd$height <- paste(measd$height, ' m')
 measd$site <- substr(measd$site, 1, 4)
 measd$site[measd$site == 'Rånä'] <- 'Raan'
 
+# Use only 3 for calibration
+measd <- subset(measd, site %in% c('Back', 'Fitt', 'Raan'))
+
 # Average temperature
 meas <- aggregate(temp ~ site + date, data = measd, FUN = mean)
 
@@ -33,14 +36,13 @@ resCalc <- function(p, meas.dat, fixed){
   # Write parameter values to file
   system('cp ../pars/pars_template.txt ../pars/pars.txt')
   for (i in 1:length(p)) {
-    system(paste0('sed -i s/^', names(p)[i], '/', p[i], '/g ../pars/pars.txt'))
+    system(paste0('sed -i s/', names(p)[i], '/', p[i], '/g ../pars/pars.txt'))
   }
 
   # Run model
   cat('. ')
   system('./stm Back ../pars/pars.txt ../pars/Back_u_pars.txt ../weather/weather.txt ../level/Back_level.txt &
           ./stm Fitt ../pars/pars.txt ../pars/Fitt_u_pars.txt ../weather/weather.txt ../level/Fitt_level.txt &
-          ./stm Lind ../pars/pars.txt ../pars/Lind_u_pars.txt ../weather/weather.txt ../level/Lind_level.txt &
           ./stm Raan ../pars/pars.txt ../pars/Raan_u_pars.txt ../weather/weather.txt ../level/Raan_level.txt
          ')
 
@@ -75,6 +77,28 @@ resCalc <- function(p, meas.dat, fixed){
 }
 
 # Initial par guesses
+p <- c(Rair = 0.02, Rconc = 0.15, Rslur = 0.7, Rsoil = 1.0, absorp = 0.02, soilDamp = 3)
+m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
+p <- m$par
+m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
+m
+
+p <- c(Rair = 0.015, Rconc = 0.6, Rslur = 0.6, Rsoil = 1.5, absorp = 0.02, soilDamp = 3)
+m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
+m
+
+p <- c(Rair = 0.04, Rconc = 1.3, Rslur = 0.6, Rsoil = 0.8, absorp = 0.03, soilDamp = 2.5)
+m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
+m
+
+
+p <- c(Rair = 0.02, Rconc = 0.15, Rslur = 0.7, Rsoil = 1.0, absorp = 0.02, soilDamp = 1)
+p <- abs(m$par)
+mb <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'L-BFGS-B', 
+            lower = c(Rair = 0.001, Rconc = 0.001, Rslur = 0.001, Rsoil = 0.001, absorp = 0.0, soilDamp = 0.1),
+            upper = c(Rair = 10, Rconc = 10, Rslur = 10, Rsoil = 10, absorp = 1.0, soilDamp = 6))
+mb
+
 p <- c(uAir = 50, glSlur = 0.3, glConc = 1, glSoil = 0.3, absorp = 0.01, soilDamp = 3)
 p <- c(uAir = 50, glSlur = 0.3, glConc = 1, glSoil = 0.3, absorp = 0.01)
 p <- c(glSlur = 3, glConc = 0.3, glSoil = 0.3, absorp = 0.01)

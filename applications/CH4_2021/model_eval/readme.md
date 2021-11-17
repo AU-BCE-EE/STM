@@ -20,3 +20,5 @@ See email for image that shows how temperature sensors hang from floats and how 
 |   Pig 2    |   Uppland   |   Kärrbäck   |   Diameter=30.5m  |   3,6        |   1,4m         |   6                       |   3         |
 |   Pig 3    |   Uppland   |   Fittja     |   Diameter=22     |   4          |   Ca 70%       |   10,5                    |   3         |
 |   Pig 4    |   Halland   |   Kasteberg  |                   |              |                |                           |   2         |
+
+But note that in data file, Backa shows depth > 3 m!!! So I am assuming it is 4 m.
