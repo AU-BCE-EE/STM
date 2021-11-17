@@ -286,6 +286,9 @@ PROGRAM stm
     tempWall(1) = 0
     DO DOY = 365 - wallAvePeriod + 2,365,1
       tempWall(1) = tempWall(1) + tempAir(DOY)/wallAvePeriod
+      IF (tempWall(1) .LT. 0.) THEN
+        tempWall(1) = tempWall(1) / 2.
+      END IF
     END DO
 
     DO DOY = 2,365,1
@@ -294,6 +297,9 @@ PROGRAM stm
       ELSE 
         tempWall(DOY) = tempWall(DOY - 1) - tempAir(365 + DOY - wallAvePeriod)/wallAvePeriod + tempAir(DOY)/wallAvePeriod
       END IF 
+      IF (tempWall(DOY) .LT. 0.) THEN
+        tempWall(DOY) = tempWall(DOY) / 2.
+      END IF
     END DO
   ELSE
     tempWall(:) = tempAir(:)
