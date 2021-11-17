@@ -286,10 +286,10 @@ PROGRAM stm
     tempWall(1) = 0
     DO DOY = 365 - wallAvePeriod + 2,365,1
       tempWall(1) = tempWall(1) + tempAir(DOY)/wallAvePeriod
-      IF (tempWall(1) .LT. 0.) THEN
-        tempWall(1) = tempWall(1) / 2.
-      END IF
     END DO
+    IF (tempWall(1) .LT. 0.) THEN
+      tempWall(1) = tempWall(1) / 2.
+    END IF
 
     DO DOY = 2,365,1
       IF (DOY > wallAvePeriod) THEN
@@ -316,6 +316,9 @@ PROGRAM stm
     DO DOY = 365 - floorAvePeriod + 2,365,1
       tempFloor(1) = tempFloor(1) + tempAir(DOY)/floorAvePeriod
     END DO
+    IF (tempFloor(1) .LT. 0.) THEN
+      tempFloor(1) = tempFloor(1) / 2.
+    END IF
 
     DO DOY = 2,365,1
       IF (DOY > floorAvePeriod) THEN
@@ -323,6 +326,9 @@ PROGRAM stm
       ELSE 
         tempFloor(DOY) = tempFloor(DOY - 1) - tempAir(365 + DOY - floorAvePeriod)/floorAvePeriod + tempAir(DOY)/floorAvePeriod
       END IF 
+      IF (tempFloor(DOY) .LT. 0.) THEN
+        tempFloor(DOY) = tempFloor(DOY) / 2.
+      END IF
     END DO
   END IF
 
