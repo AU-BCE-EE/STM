@@ -1,5 +1,5 @@
 User-specified parameters for STM model
-600      Number of days in simulation (nDays)
+1000      Number of days in simulation (nDays)
 266       Starting day of simulation as day of year (1-365) (startingDOY)
 1         Number of tanks (nChannels)
 4.5       Total depth (m) (channelDepth)

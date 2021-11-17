@@ -41,56 +41,33 @@ for (i in ff) {
   mod <- rbind(mod, d)
 }
 
-mod$year <- 2019 + mod$year
+mod$year <- 2018 + mod$year
 mod$date <- as.POSIXct(paste(mod$year, mod$doy), format = '%Y %j')
+# Drop start-up year
+mod <- subset(mod, year > 2019)
 
 # Add in model predictions by date
 dat <- merge(dat, mod, by = c('site', 'date'), all = TRUE)
 dm <- merge(dm, mod, by = c('site', 'date'), all = TRUE)
 
-dm$group <- 'A'
-dm$group[dm$site %in% c('Back', 'Fitt')] <- 'B'
+dm <- dm[order(dm$site, dm$date), ]
 
-ggplot(dm, aes(date, temp, colour = site)) +
-  geom_line(lty = 1) +
-  geom_line(aes(date, temp.slurry), lty = 2) +
-  labs(x = 'Date', y = expression('Temperature'~(degree*C)), 
-       colour = 'Site') +
-  theme(legend.position = 'top')
-ggsave('plots/ave_stor_temp.png', height = 6, width = 8)
-
-ggplot(dm, aes(date, temp)) +
-  geom_line(aes(date, temp.air), colour = 'skyblue', lty = 1) +
-  geom_line(col = 'red') +
-  geom_line(aes(date, temp.slurry), colour = 'black') +
+# Very strange that some parts of the temp (meas) lines are not plotted with geom_line()
+# Can eliminate by dropping temp == NA
+ggplot(dm, aes(doy, temp)) +
+  geom_line(aes(doy, temp.air), colour = 'skyblue', lty = 1) +
+  geom_line(aes(doy, temp.slurry), colour = 'black') +
+  geom_path(col = 'red') +
   facet_wrap(~ site) +
-  labs(x = 'Date', y = expression('Temperature'~(degree*C)), 
+  labs(x = 'Day of year', y = expression('Temperature'~(degree*C)), 
        colour = 'Position (from surface)') +
   theme(legend.position = 'top')
-ggsave('plots/ave_stor_temp_4.png', height = 6, width = 8)
+ggsave('plots/ave_stor_temp_doy.png', height = 6, width = 8)
 
-ggplot(dat, aes(date.time, temp, colour = factor(depth))) +
-  geom_line(aes(date, temp.air), colour = 'skyblue', lty = 1) +
-  geom_line() +
-  geom_line(aes(date, temp.slurry), colour = 'black') +
-  facet_wrap(~ site) +
-  labs(x = 'Date', y = expression('Temperature'~(degree*C)), 
-       colour = 'Position (from surface)') +
-  theme(legend.position = 'top')
-ggsave('plots/stor_temp_4.png', height = 6, width = 8)
-
-ggplot(dm, aes(date, depth.slurry)) +
+ggplot(dm, aes(doy, depth.slurry)) +
   geom_line() +
   facet_wrap(~ site) +
   labs(x = 'Date', y = 'Slurry depth (m)', 
        colour = 'Position (from surface)') +
   theme(legend.position = 'top')
-ggsave('plots/slurry_depth_4.png', height = 6, width = 8)
-
-ggplot(dm, aes(date, mass.slurry)) +
-  geom_line() +
-  facet_wrap(~ site) +
-  labs(x = 'Date', y = 'Slurry mass (Mg)', 
-       colour = 'Position (from surface)') +
-  theme(legend.position = 'top')
-ggsave('plots/slurry_mass_4.png', height = 6, width = 8)
+ggsave('plots/slurry_depth_doy.png', height = 6, width = 8)

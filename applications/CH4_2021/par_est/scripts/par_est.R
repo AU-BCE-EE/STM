@@ -38,10 +38,10 @@ resCalc <- function(p, meas.dat, fixed){
 
   # Run model
   cat('. ')
-  system('./stm Back ../pars/pars.txt ../pars/Back_u_pars.txt ../weather/weather.txt &
-          ./stm Fitt ../pars/pars.txt ../pars/Fitt_u_pars.txt ../weather/weather.txt &
-          ./stm Lind ../pars/pars.txt ../pars/Lind_u_pars.txt ../weather/weather.txt &
-          ./stm Raan ../pars/pars.txt ../pars/Raan_u_pars.txt ../weather/weather.txt
+  system('./stm Back ../pars/pars.txt ../pars/Back_u_pars.txt ../weather/weather.txt ../level/Back_level.txt &
+          ./stm Fitt ../pars/pars.txt ../pars/Fitt_u_pars.txt ../weather/weather.txt ../level/Fitt_level.txt &
+          ./stm Lind ../pars/pars.txt ../pars/Lind_u_pars.txt ../weather/weather.txt ../level/Lind_level.txt &
+          ./stm Raan ../pars/pars.txt ../pars/Raan_u_pars.txt ../weather/weather.txt ../level/Raan_level.txt
          ')
 
   # Move output
@@ -90,12 +90,14 @@ p <- c(uAir = 50, glSlur = 0.3, glSoil = 0.3, absorp = 0.01)
 fixed <- c(glConc = 0.15, soilDamp = 4)
 
 m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas, fixed = fixed), method = 'Nelder-Mead')
+mm <- m
 
 # Used this last
 p <- c(uAir = 50, glSlur = 0.3, glConc = 1, glSoil = 0.3, absorp = 0.02, soilDamp = 3)
 m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
 
 m
+mm
 
 p <- c(glSlur = 0.3, glSoil = 0.3, absorp = 0.01)
 fixed <- c(uAir = 50, glConc = 0.15, soilDamp = 4)
