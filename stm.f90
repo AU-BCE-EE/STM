@@ -20,8 +20,6 @@ PROGRAM stm
   INTEGER :: DOY, DOYprev         ! Day of year (1 - 365)
   INTEGER :: DOS         ! Day of simulation
   INTEGER :: YR          ! Relative year (1 + )
-  INTEGER :: targetDOY   ! Day of year in target_temp.txt file
-  INTEGER :: nextTargetDOY   ! Day of year in target_temp.txt file
   INTEGER :: nDays       ! Number of days in simulation
   INTEGER :: startingDOY ! Starting day of year
   INTEGER :: hottestDOY  ! Hottest day of year
@@ -43,25 +41,20 @@ PROGRAM stm
 
   ! Temperatures, all in degrees C
   REAL, DIMENSION(365) :: tempAir, tempFloor, tempWall ! Air, floor (bottom of store or pit), and wall (side of store or pit)
-  REAL :: tempSum        ! 24 h temperature sum for calculating daily average
   REAL :: dTemp          ! Change in temperature during time step (deg. C) 
-  REAL :: tempTarget     ! Target temperature for a particular period when heated
-  REAL :: nextTempTarget     ! Target temperature for a particular period when heated
   REAL :: maxAnnTemp     ! Maximum daily average air temperature over the year
   REAL :: minAnnTemp     ! Minimum daily average air temperature over the year
   REAL :: tempInitial    ! Initial slurry temperature
   REAL :: tempSlurry     ! Hourly slurry temperature 
-  REAL :: tempSlurryH0   ! Slurry temperature at start of day (used for Qfeed calc)
   REAL :: tempSS         ! Steady-state slurry temperature used to deal with numerical instability
   REAL :: sumTempSlurry  ! Sum of hourly slurry temperatures for calculating daily mean
   REAL :: tempIn         ! Temperature of slurry when added to store/pit/tank/lagoon
   REAL :: trigPartTemp   ! Sine part of temperature expression
   REAL :: residMass      ! Mass of slurry left behind when emptying
-  REAL :: soilFreezeDiv  ! Fudge factor for soil freezing
 
   ! Geometry of storage structure
   REAL :: slurryDepth    ! Depth of slurry in store/pit (m)
-  REAL :: storeDepth   ! Total depth of store/pit (m)
+  REAL :: storeDepth     ! Total depth of store/pit (m)
   REAL :: buriedDepth    ! Buried depth (m)
   REAL :: wallDepth      ! Depth at which horizontal heat transfer to soil is evaluated (m) 
   REAL :: length, width  ! Length and width of store/pit (m)
@@ -111,11 +104,11 @@ PROGRAM stm
   REAL :: HHadj          ! Total adjusted for melting slurry in J
 
   LOGICAL :: calcWeather ! .TRUE. when weather inputs are calculated (otherwise read from file)
-  LOGICAL :: warming     ! .TRUE. when slurry is warming over a time step
   LOGICAL :: fixedFill   ! .TRUE. when slurry is added at a fixed rate, specified in user par file
 
   ! Other parameters
   REAL, PARAMETER :: PI = 3.1415927
+  REAL, PARAMETER :: soilFreezeDiv = 1.0  ! Fudge factor for soil freezing
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -234,14 +227,11 @@ PROGRAM stm
   ! Initial calculations
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  ! Hard-wired parameters
-  soilFreezeDiv = 1.
-
   ! Calculate some geometry-related variables
   wallDepth = 0.5 * buriedDepth             ! m
   IF (width .EQ. 0.) THEN
     ! Circular
-    areaFloor = 3.1416 * (length / 2.)**2   ! m2
+    areaFloor = PI * (length / 2.)**2   ! m2
   ELSE 
     ! Rectangular
     areaFloor = width*length*nStores      ! m2
@@ -421,8 +411,8 @@ PROGRAM stm
     slurryDepth = 1000 * massSlurry / (dSlurry*areaFloor)  ! Slurry depth in m
     IF (width .EQ. 0.) THEN
       ! Circular
-      areaDwall = MIN(slurryDepth, buriedDepth) * 3.1416 * length * nStores
-      areaUwall = MAX(slurryDepth - buriedDepth, 0.) * 3.1416 * length * nStores
+      areaDwall = MIN(slurryDepth, buriedDepth) * PI * length * nStores
+      areaUwall = MAX(slurryDepth - buriedDepth, 0.) * PI * length * nStores
     ELSE 
       ! Rectangular
       areaDwall = MIN(slurryDepth, buriedDepth) * 2. * (length + width) * nStores
