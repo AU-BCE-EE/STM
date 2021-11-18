@@ -269,6 +269,14 @@ PROGRAM stm
   wallAvePeriod = MAX(wallDepth/soilDamp*365, 1.)
   floorAvePeriod = MAX(buriedDepth/soilDamp*365, 1.)
 
+  ! Avoid very short averaging periods that are not plausible (because floor is actually covered with tank, so 1 d impossible)
+  IF (floorAvePeriod .LT. 5.) THEN
+    floorAvePeriod = 5.
+  END IF
+  IF (wallAvePeriod .LT. 2.) THEN
+    wallAvePeriod = 2.
+  END IF
+
   ! Calculate moving average for first day of year
   ! Wall first
   IF (wallAvePeriod > 365) THEN
