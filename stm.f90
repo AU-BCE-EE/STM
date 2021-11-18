@@ -215,10 +215,10 @@ PROGRAM stm
   ! Output file header
   WRITE(10,*) 'Day of  Day of    Year   Slurry  Frozen  Slurry   Air    Wall   Floor    Slurry'
   WRITE(10,*) 'sim.     year             mass    mass   depth     T      T       T        T'
-
-  WRITE(11,*) 'Day of  Day of Year ' 
-  WRITE(11,*) 'sim.     year               Qrad         Qslur2air     Qslur2floor      Qslur2dwall      Qslur2uwall &
-    &          Qfeed       Qout       Qoutave     HH   HHadj' 
+ 
+  WRITE(11,*) 'Day of  Day of     Year  ' 
+  WRITE(11,*) 'sim.     year                   Qrad         Qslur2air     Qslur2floor    Qslur2dwall     Qslur2uwall &
+    &     Qfeed          Qout         Qoutave          HH           HHadj' 
 
   WRITE(12,*) 'Day of  Day of Year Air   Radiation'
   WRITE(12,*) 'sim.     year        T'
@@ -495,8 +495,9 @@ PROGRAM stm
       
       ! Steady-state temperature NTS: how to deal with freezing?
       tempSS = (tempAir(DOY)/Rtop*areaAir + tempFloor(DOY)/Rfloor*areaFloor + tempWall(DOY)/Rdwall*areaDwall + &
-        & tempWall(DOY)/Ruwall*areaUwall - Qrad) / (areaAir/Rtop + areaFloor/Rfloor + areaDwall/Rdwall + areaUwall/Ruwall)
-      
+        & tempAir(DOY)/Ruwall*areaUwall + (1000. * slurryProd / 86400. * cpSlurry * tempIn) + Qrad) / &
+        & (areaAir/Rtop + areaFloor/Rfloor + areaDwall/Rdwall + areaUwall/Ruwall + (1000. * slurryProd / 86400. * cpSlurry))
+
       ! Limit change in temperature to change to SS temp
       IF (dTemp > 0. .AND. tempSlurry > tempSS) THEN
         tempSlurry = tempSS
@@ -509,8 +510,8 @@ PROGRAM stm
 
     END DO
 
-    WRITE(10,"(1X,I4,5X,I3,5X,I4,1X,7F8.2)") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
-        & tempWall(DOY), tempFloor(DOY), sumTempSlurry/24. 
+    WRITE(10,"(1X,I4,5X,I3,5X,I4,1X,8F8.2)") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
+        & tempWall(DOY), tempFloor(DOY), sumTempSlurry/24
 
     WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,10F15.0)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2dwall, Qslur2uwall, Qfeed, Qout, &
         & sumQout/24., HH, HHadj
