@@ -5,8 +5,8 @@ Slurry physical constants
    1000        4200          333550
 Heat transfer resistance terms (K-m2/W)
   Air  Concrete   Slurry   Soil
-  0.535   2.92   0.00802   2.15
+  0.000998   1.56     0.578   1.96 
 Other parameters
  Absorptivity  Soil damping depth
     (-)              (m)
-  0.00046           2.02
+  0.00476           2.00 
