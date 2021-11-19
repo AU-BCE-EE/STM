@@ -105,6 +105,7 @@ PROGRAM stm
 
   LOGICAL :: calcWeather ! .TRUE. when weather inputs are calculated (otherwise read from file)
   LOGICAL :: fixedFill   ! .TRUE. when slurry is added at a fixed rate, specified in user par file
+  LOGICAL :: useSS       ! .TRUE. when steady-state temperature was used at some point within a day
 
   ! Other parameters
   REAL, PARAMETER :: PI = 3.1415927
@@ -440,6 +441,7 @@ PROGRAM stm
     sumTempSlurry = 0
     sumQout = 0
 
+    useSS = .FALSE.
     DO HR = 1,24,1
 
       ! Update slurry mass, distributing inflow evenly across day
@@ -495,14 +497,16 @@ PROGRAM stm
       
       ! Steady-state temperature NTS: how to deal with freezing?
       tempSS = (tempAir(DOY)/Rtop*areaAir + tempFloor(DOY)/Rfloor*areaFloor + tempWall(DOY)/Rdwall*areaDwall + &
-        & tempAir(DOY)/Ruwall*areaUwall + (1000. * slurryProd / 86400. * cpSlurry * tempIn) + Qrad) / &
+        & tempAir(DOY)/Ruwall*areaUwall + (1000. * slurryProd / 86400. * cpSlurry * tempIn) - Qrad) / &
         & (areaAir/Rtop + areaFloor/Rfloor + areaDwall/Rdwall + areaUwall/Ruwall + (1000. * slurryProd / 86400. * cpSlurry))
 
       ! Limit change in temperature to change to SS temp
       IF (dTemp > 0. .AND. tempSlurry > tempSS) THEN
         tempSlurry = tempSS
+        useSS = .TRUE.
       ELSEIF (dTemp < 0. .AND. tempSlurry < tempSS) THEN
         tempSlurry = tempSS
+        useSS = .TRUE.
       END IF
       
       sumTempSlurry = sumTempSlurry + tempSlurry
@@ -513,8 +517,8 @@ PROGRAM stm
     WRITE(10,"(1X,I4,5X,I3,5X,I4,1X,8F8.2)") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
         & tempWall(DOY), tempFloor(DOY), sumTempSlurry/24
 
-    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,10F15.0)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2dwall, Qslur2uwall, Qfeed, Qout, &
-        & sumQout/24., HH, HHadj
+    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,10F15.0,2X,L5)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2dwall, &
+        & Qslur2uwall, Qfeed, Qout, sumQout/24., HH, HHadj, useSS
 
     WRITE(12,"(1X,I4,5X,I3,5X,I4,1X,2F15.0)") DOS, DOY, YR, tempAir(DOY), solRad(DOY)
     
