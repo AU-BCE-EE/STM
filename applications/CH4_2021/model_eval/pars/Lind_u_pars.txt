@@ -10,6 +10,7 @@ Settings for STM heat transfer model
 346       Effective area exposed to solar radiation (m2)
 0         Initial volume of slurry (m3) (ignored if using level file)
 15        Initial slurry temperature (degrees C)
+None      Added slurry temperature description, Constant = fixed temperature, None = no heat
 19        Temperature of added slurry (degrees C)
 0         Slurry addition rate (tonnes/d) (ignored if using level file)
 0         Residual slurry mass left when emptying (tonnes or m3) (ignored if using level file)
