@@ -2,12 +2,12 @@ Settings for STM heat transfer model
 1095      Duration of simulation (days)
 1         Starting day of simulation as day of year (1-365, no leap years)
 1         Number of identical storages
-3.6       Total (maximum) depth (m)
-2.0       Buried depth (to bottom) (m)
-22        Dimension 1 of tank (length or diameter) (m)
+5.5       Total (maximum) depth (m)
+1.5       Buried depth (to bottom) (m)
+36        Dimension 1 of tank (length or diameter) (m)
 0         Dimension 2 of tank (width or set to 0 for circular tanks) (m)
-380       Effective slurry-to-air convection area (m2) (usually simply upper exposed area)
-380       Effective area exposed to solar radiation (m2)
+1018      Effective slurry-to-air convection area (m2) (usually simply upper exposed area)
+1018      Effective area exposed to solar radiation (m2)
 0         Initial volume of slurry (m3) (ignored if using level file)
 15        Initial slurry temperature (degrees C)
 None      Added slurry temperature description, Constant = fixed temperature, None = no heat
