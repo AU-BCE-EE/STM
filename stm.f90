@@ -106,6 +106,9 @@ PROGRAM stm
   LOGICAL :: calcWeather ! .TRUE. when weather inputs are calculated (otherwise read from file)
   LOGICAL :: fixedFill   ! .TRUE. when slurry is added at a fixed rate, specified in user par file
   LOGICAL :: useSS       ! .TRUE. when steady-state temperature was used at some point within a day
+  LOGICAL :: constantTempIn  ! .TRUE. when temperature of added slurry is constant and added slurry brings heat energy in
+
+  CHARACTER (LEN = 2) tempInSetting
 
   ! Other parameters
   REAL, PARAMETER :: PI = 3.1415927
@@ -182,6 +185,7 @@ PROGRAM stm
   READ(1,*) areaSol
   READ(1,*) slurryVol
   READ(1,*) tempInitial
+  READ(1,*) tempInSetting
   READ(1,*) tempIn
   READ(1,*) slurryProd
   READ(1,*) residMass
@@ -227,6 +231,16 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Initial calculations
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  ! Sort out tempreature of added slurry
+  IF (tempInsetting .EQ. 'Co') THEN
+    constantTempIn = .TRUE.
+  ELSE IF (tempInSetting .EQ. 'No') THEN
+    constantTempIn = .FALSE.
+  ELSE
+    WRITE(*,*) "Error: Addes slurry temperature description not recognized. Must be Constant or None. Stopping."
+    STOP
+  END IF
 
   ! Calculate some geometry-related variables
   wallDepth = 0.5 * buriedDepth             ! m
@@ -348,7 +362,7 @@ PROGRAM stm
     READ(4,*) DOY, level(1)
     levelPrev = level(1)
     IF (DOY .NE. 1.) THEN
-      WRITE(*,*) "First day of year *must* be 1 in level file! Stopping."
+      WRITE(*,*) "Error: First day of year *must* be 1 in level file! Stopping."
       STOP
     END IF
     DOYprev = 1
@@ -450,8 +464,12 @@ PROGRAM stm
     
       ! Calculate heat transfer rates, all in watts (J/s)
       ! Qfeed is hypothetical rate pretending to make up difference relative to new mass at tempSlurry
-      ! J/s               K           kg/t      t/d     / s/d    *  J/kg-K   
-      Qfeed = (tempSlurry - tempIn) * 1000 * slurryProd / 86400. * cpSlurry
+      IF (constantTempIn) THEN
+        ! J/s               K           kg/t      t/d     / s/d    *  J/kg-K   
+        Qfeed = (tempSlurry - tempIn) * 1000 * slurryProd / 86400. * cpSlurry
+      ELSE 
+        Qfeed = 0.0
+      END IF
       ! J/s   J/s-m2-K     K               K          m2
       Qslur2air = (tempSlurry - tempAir(DOY)) / Rtop * areaAir
       Qslur2floor = (tempSlurry - tempFloor(DOY)) / Rfloor * areaFloor
