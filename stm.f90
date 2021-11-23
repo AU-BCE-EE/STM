@@ -455,6 +455,7 @@ PROGRAM stm
     sumTempSlurry = 0
     sumQout = 0
 
+    ! Set use steady state indicator to false at start of each day
     useSS = .FALSE.
     DO HR = 1,24,1
 
