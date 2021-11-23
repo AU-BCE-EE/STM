@@ -465,12 +465,12 @@ PROGRAM stm
     
       ! Calculate heat transfer rates, all in watts (J/s)
       ! Qfeed is hypothetical rate pretending to make up difference relative to new mass at tempSlurry
-      IF (constantTempIn) THEN
-        ! J/s               K           kg/t      t/d     / s/d    *  J/kg-K   
-        Qfeed = (tempSlurry - tempIn) * 1000 * slurryProd / 86400. * cpSlurry
-      ELSE 
-        Qfeed = 0.0
+      IF (.NOT. constantTempIn) THEN
+        ! Overwrite feed temperature if there is no heat transfer in feed
+        tempIn = tempSlurry
       END IF
+      ! J/s               K           kg/t      t/d     / s/d    *  J/kg-K   
+      Qfeed = (tempSlurry - tempIn) * 1000 * slurryProd / 86400. * cpSlurry
       ! J/s   J/s-m2-K     K               K          m2
       Qslur2air = (tempSlurry - tempAir(DOY)) / Rtop * areaAir
       Qslur2floor = (tempSlurry - tempFloor(DOY)) / Rfloor * areaFloor
