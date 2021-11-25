@@ -223,7 +223,7 @@ PROGRAM stm
  
   WRITE(11,*) 'Day of  Day of     Year  ' 
   WRITE(11,*) 'sim.     year                   Qrad         Qslur2air     Qslur2floor    Qslur2dwall     Qslur2uwall &
-    &     Qfeed          Qout         Qoutave          HH           HHadj' 
+    &     Qfeed          Qout         Qoutave          HH           HHadj       Steady state' 
 
   WRITE(12,*) 'Day of  Day of Year Air   Radiation'
   WRITE(12,*) 'sim.     year        T'
