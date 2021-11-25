@@ -487,11 +487,12 @@ PROGRAM stm
       HHadj = HH + 1000. * massFrozen * hfSlurry
       massFrozen = 0.0
 
+      ! Potential temperature change (omitting latent energy for now)
       dTemp = - HHadj / (1000. * cpSlurry * massSlurry)
 
       ! Freeze and thaw
       IF (tempSlurry + dTemp .LT. 0.0) THEN
-        ! Use HH to get to 0.0
+        ! Use HH to get to 0 C
         HHadj = HHadj + (0.0 - tempSlurry) * 1000. * cpSlurry * massSlurry
         tempSlurry = 0.0
 
@@ -510,11 +511,15 @@ PROGRAM stm
         END IF
       END IF
 
-      ! Recalculate dT
+      !!! Weighted cp
+      !!! Not implemented because cp needs to be used below in tempSS calc and I have to think about what makes sense
+      !!cpSlurry = massFrozen / massSlurry * cpFrozen + (1.0 - massFrozen / massSlurry) * cpLiquid
+
+      ! Recalculate dT, now actual temperature change
       dTemp = - HHadj / (1000. * cpSlurry * massSlurry)
       tempSlurry = tempSlurry + dTemp
       
-      ! Steady-state temperature NTS: how to deal with freezing?
+      ! Steady-state temperature
       tempSS = (tempAir(DOY)/Rtop*areaAir + tempFloor(DOY)/Rfloor*areaFloor + tempWall(DOY)/Rdwall*areaDwall + &
         & tempAir(DOY)/Ruwall*areaUwall + (1000. * slurryProd / 86400. * cpSlurry * tempIn) - Qrad) / &
         & (areaAir/Rtop + areaFloor/Rfloor + areaDwall/Rdwall + areaUwall/Ruwall + (1000. * slurryProd / 86400. * cpSlurry))
