@@ -98,9 +98,10 @@ PROGRAM stm
   REAL :: Qout           ! Total
   REAL :: QoutPart       ! Total after some use for melting/freezing
   REAL :: sumQout        ! Sum of total for average
+  REAL :: sumHH, sumHHadj ! Sum for average
 
   ! Heat flow total
-  REAL :: HH             ! Total heat flow out of slurry in a time step in J
+  REAL :: HH             ! Total heat flow out of slurry in a time step
   REAL :: HHadj          ! Total adjusted for melting slurry in J
 
   LOGICAL :: calcWeather ! .TRUE. when weather inputs are calculated (otherwise read from file)
@@ -221,9 +222,10 @@ PROGRAM stm
   WRITE(10,*) 'Day of  Day of    Year   Slurry  Frozen  Slurry   Air    Wall   Floor    Slurry'
   WRITE(10,*) 'sim.     year             mass    mass   depth     T      T       T        T'
  
-  WRITE(11,*) 'Day of  Day of     Year  ' 
-  WRITE(11,*) 'sim.     year                   Qrad         Qslur2air     Qslur2floor    Qslur2dwall     Qslur2uwall &
-    &     Qfeed          Qout         Qoutave          HH           HHadj       Steady state' 
+
+  WRITE(11,*) 'Day of  Day of              -------------Heat flow rates out in W----------------------------------------------'
+  WRITE(11,*) 'sim.     year     Year    Radiation    Air       Floor   Lower wall  Upper wall   Feed      Total    Total ave. &  
+    &  HH            HHave          HHadj         HHadjave   SST      SS'
 
   WRITE(12,*) 'Day of  Day of Year Air   Radiation'
   WRITE(12,*) 'sim.     year        T'
@@ -535,14 +537,16 @@ PROGRAM stm
       
       sumTempSlurry = sumTempSlurry + tempSlurry
       sumQout = sumQout + Qout
+      sumHH = sumHH + HH
+      sumHHadj = sumHHadj + HHadj
 
     END DO
 
     WRITE(10,"(1X,I4,5X,I3,5X,I4,1X,8F8.2)") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
         & tempWall(DOY), tempFloor(DOY), sumTempSlurry/24
 
-    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,10F15.0,2X,L5)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2dwall, &
-        & Qslur2uwall, Qfeed, Qout, sumQout/24., HH, HHadj, useSS
+    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,9F11.1,3F15.0,1X,1F5.2,2X,L5)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2dwall, &
+        & Qslur2uwall, Qfeed, Qout, sumQout/24., HH, sumHH/24., HHadj, sumHHadj/24., tempSS, useSS
 
     WRITE(12,"(1X,I4,5X,I3,5X,I4,1X,2F15.0)") DOS, DOY, YR, tempAir(DOY), solRad(DOY)
     
