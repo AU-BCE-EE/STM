@@ -297,12 +297,10 @@ PROGRAM stm
   ! Calculate moving average for first day of year
   ! Wall first
   IF (wallAvePeriod > 365) THEN
-    DO DOY = 1,365,1
-      tempWall(DOY) = (minAnnTemp + maxAnnTemp)/2.
-    END DO
+    tempWall(:) = (minAnnTemp + maxAnnTemp)/2.
   ELSE IF (wallAvePeriod > 1) THEN
     ! First need to calculate value for DOY = 1
-    tempWall(1) = 0
+    tempWall(1) = tempAir(1) / wallAvePeriod
     DO DOY = 365 - wallAvePeriod + 2,365,1
       tempWall(1) = tempWall(1) + tempAir(DOY)/wallAvePeriod
     END DO
@@ -331,12 +329,10 @@ PROGRAM stm
 
   ! Then floor
   IF (floorAvePeriod > 365) THEN
-    DO DOY = 1,365,1
-      tempFloor(DOY) = (minAnnTemp + maxAnnTemp)/2.
-    END DO
+    tempFloor(:) = (minAnnTemp + maxAnnTemp)/2.
   ELSE 
     ! First need to calculate value for DOY = 1
-    tempFloor(1) = 0
+    tempFloor(1) = tempAir(1) / floorAvePeriod
     DO DOY = 365 - floorAvePeriod + 2,365,1
       tempFloor(1) = tempFloor(1) + tempAir(DOY)/floorAvePeriod
     END DO
@@ -456,6 +452,8 @@ PROGRAM stm
     ! Start hour loop
     sumTempSlurry = 0
     sumQout = 0
+    sumHH = 0
+    sumHHadj = 0
 
     ! Set use steady state indicator to false at start of each day
     useSS = .FALSE.
@@ -545,7 +543,7 @@ PROGRAM stm
     WRITE(10,"(1X,I4,5X,I3,5X,I4,1X,8F8.2)") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
         & tempWall(DOY), tempFloor(DOY), sumTempSlurry/24
 
-    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,9F11.1,3F15.0,1X,1F5.2,2X,L5)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2dwall, &
+    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,9F11.3,3F15.0,1X,1F5.2,2X,L5)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2dwall, &
         & Qslur2uwall, Qfeed, Qout, sumQout/24., HH, sumHH/24., HHadj, sumHHadj/24., tempSS, useSS
 
     WRITE(12,"(1X,I4,5X,I3,5X,I4,1X,2F15.0)") DOS, DOY, YR, tempAir(DOY), solRad(DOY)
