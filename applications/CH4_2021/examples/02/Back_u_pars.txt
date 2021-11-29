@@ -12,7 +12,7 @@ Settings for STM heat transfer model
 15        Initial slurry temperature (degrees C)
 None      Added slurry temperature description, Constant = fixed temperature, None = no heat
 19        Temperature of added slurry (degrees C)
-0         Slurry addition rate (tonnes/d) (ignored if using level file)
+10        Slurry addition rate (tonnes/d) (ignored if using level file)
 0         Residual slurry mass left when emptying (tonnes or m3) (ignored if using level file)
-0         Emptying day of year (ignored if using level file)
-0         Emptying day of year (ignored if using level file) 
+60        Emptying day of year (ignored if using level file)
+150       Emptying day of year (ignored if using level file) 
