@@ -80,19 +80,20 @@ resCalc <- function(p, meas.dat, fixed){
 p <- c(Rair = 0.02, Rconc = 0.15, Rslur = 0.7, Rsoil = 1.0, absorp = 0.02, soilDamp = 3)
 m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
 m
-p <- m$par
-m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
-m
 
-p <- c(Rair = 0.015, Rconc = 0.6, Rslur = 0.6, Rsoil = 1.5, absorp = 0.02, soilDamp = 3)
-m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
-m
-
-p <- c(Rair = 0.04, Rconc = 1.3, Rslur = 0.6, Rsoil = 0.8, absorp = 0.03, soilDamp = 2.5)
-m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
-m
-
-m1 <- m
+#p <- m$par
+#m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
+#m
+#
+#p <- c(Rair = 0.015, Rconc = 0.6, Rslur = 0.6, Rsoil = 1.5, absorp = 0.02, soilDamp = 3)
+#m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
+#m
+#
+#p <- c(Rair = 0.04, Rconc = 1.3, Rslur = 0.6, Rsoil = 0.8, absorp = 0.03, soilDamp = 2.5)
+#m <- optim(par = p, fn = function(par) resCalc(p = par, meas.dat = meas), method = 'Nelder-Mead')
+#m
+#
+#m1 <- m
 
 
 ##p <- c(Rair = 0.02, Rconc = 0.15, Rslur = 0.7, Rsoil = 1.0, absorp = 0.02, soilDamp = 1)
