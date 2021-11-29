@@ -40,7 +40,7 @@ PROGRAM stm
   INTEGER :: numArgs
 
   ! Temperatures, all in degrees C
-  REAL, DIMENSION(365) :: tempAir, tempFloor, tempWall ! Air, floor (bottom of store or pit), and wall (side of store or pit)
+  REAL, DIMENSION(366) :: tempAir, tempFloor, tempWall ! Air, floor (bottom of store or pit), and wall (side of store or pit)
   REAL :: dTemp          ! Change in temperature during time step (deg. C) 
   REAL :: maxAnnTemp     ! Maximum daily average air temperature over the year
   REAL :: minAnnTemp     ! Minimum daily average air temperature over the year
@@ -69,7 +69,7 @@ PROGRAM stm
   REAL :: absorp         ! Slurry or cover effective absorptivity (dimensionless)
   REAL :: maxAnnRad      ! Maximum daily average radiation over the year
   REAL :: minAnnRad      ! Minimum daily average radiation over the year
-  REAL, DIMENSION(365) :: solRad ! Average solar radiation rate (W/m2)
+  REAL, DIMENSION(366) :: solRad ! Average solar radiation rate (W/m2)
   REAL :: trigPartRad    ! Sine part of radiation expression
   
   ! Other slurry variables
@@ -78,7 +78,7 @@ PROGRAM stm
   REAL :: slurryProd     ! Slurry production rate (= inflow = outflow) (Mg/d)
 
   ! Level variables
-  REAL, DIMENSION(365) :: level, rLevelAve
+  REAL, DIMENSION(366) :: level, rLevelAve
   REAL :: levelPrev
 
   ! Heat transfer coefficients and related variables
