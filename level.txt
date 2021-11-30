@@ -1,5 +1,5 @@
 doy	level
-1       3.      Must have DOY 0 value!
+1       3.      Must have DOY 1 value!
 61	3.67
 128	1.77
 145	3.58
