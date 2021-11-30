@@ -383,6 +383,7 @@ PROGRAM stm
 
   END IF
 
+
   ! Set initial slurry temperature
   tempSlurry = tempInitial
 
@@ -404,13 +405,23 @@ PROGRAM stm
     ! Sort out filling rate or fixed emptying
     ! Assumes given level is for end of day
     IF (.NOT. fixedFill) THEN
+      IF (DOY == 1) THEN
+        levelPrev = level(365)
+      ELSE 
+        levelPrev = level(DOY - 1)
+      END IF
       IF (level(DOY) .GT. levelPrev) THEN
         ! NTS: some inconsistency about slurry level defined at beginning or end of day
-        massSlurry = level(DOY) * areaFloor * dSlurry/1000.
-        ! Hourly slurry addition
+        massSlurry = levelPrev * areaFloor * dSlurry/1000.
+        ! Daily slurry addition
         slurryProd = (level(DOY) - levelPrev) * areaFloor * dSlurry/1000.
+      ELSE IF (level(DOY) .EQ. levelPrev) THEN
+        ! No addition
+        slurryProd = 0.0
+        massSlurry = level(DOY) * areaFloor * dSlurry/1000.
       ELSE IF (level(DOY) .LT. levelPrev) THEN
         ! Removal, so fixed slurry mass
+        ! NTS: removal at beginning of day, addition at end. . .
         massSlurry = level(DOY) * areaFloor * dSlurry/1000.
         slurryProd = 0.0
         IF (massFrozen .GT. massSlurry) THEN
@@ -426,24 +437,6 @@ PROGRAM stm
           massFrozen = massSlurry
         END IF
       END IF
-    END IF
-
-    ! Get depth and wall area
-    slurryDepth = 1000 * massSlurry / (dSlurry*areaFloor)  ! Slurry depth in m
-    IF (width .EQ. 0.) THEN
-      ! Circular
-      areaDwall = MIN(slurryDepth, buriedDepth) * PI * length * nStores
-      areaUwall = MAX(slurryDepth - buriedDepth, 0.) * PI * length * nStores
-    ELSE 
-      ! Rectangular
-      areaDwall = MIN(slurryDepth, buriedDepth) * 2. * (length + width) * nStores
-      areaUwall = MAX(slurryDepth - buriedDepth, 0.) * 2. * (length + width) * nStores
-    END IF
-
-    ! Check slurry depth
-    IF (slurryDepth .GT. storeDepth) THEN
-      WRITE(*,*) "Slurry depth is greater than maximum depth! Stopping. Check inputs."
-      STOP
     END IF
 
     ! Radiation fixed for day (W = J/s)
@@ -462,6 +455,24 @@ PROGRAM stm
       ! Update slurry mass, distributing inflow evenly across day
       !   t           t            t/d     / h/d * h = t         
       massSlurry = massSlurry + slurryProd / 24. * 1
+
+      ! Get depth and wall area
+      slurryDepth = 1000 * massSlurry / (dSlurry*areaFloor)  ! Slurry depth in m
+      IF (width .EQ. 0.) THEN
+        ! Circular
+        areaDwall = MIN(slurryDepth, buriedDepth) * PI * length * nStores
+        areaUwall = MAX(slurryDepth - buriedDepth, 0.) * PI * length * nStores
+      ELSE 
+        ! Rectangular
+        areaDwall = MIN(slurryDepth, buriedDepth) * 2. * (length + width) * nStores
+        areaUwall = MAX(slurryDepth - buriedDepth, 0.) * 2. * (length + width) * nStores
+      END IF
+
+      ! Check slurry depth
+      IF (slurryDepth .GT. 1.01 * storeDepth) THEN
+        WRITE(*,*) "Slurry depth is greater than maximum depth! Stopping. Check inputs."
+        STOP
+      END IF
     
       ! Calculate heat transfer rates, all in watts (J/s)
       ! Qfeed is hypothetical rate pretending to make up difference relative to new mass at tempSlurry
