@@ -98,7 +98,7 @@ Q = (T(slurry) - T(environment)) / R * A
 ```
 
 where R is the overall resistance term, and A is the cross-sectional area available for heat transfer.
-The overall resitance term for any route is simply the sum of relevant terms.
+The overall resistance term for any route is simply the sum of relevant terms.
 The model uses the following expressions.
 
 ```
@@ -108,8 +108,8 @@ The model uses the following expressions.
   R(top) =   R(slurry) + R(air) 
 ```
 
-The resitance term for air, like all others for individual components, is calculated externally by the user, and can include the effect of a cover.
-Any resistance from the temperature gradient that forms in slurry is included in the slurry resitance term.
+The resistance term for air, like all others for individual components, is calculated externally by the user, and can include the effect of a cover.
+Any resistance from the temperature gradient that forms in slurry is included in the slurry resistance term.
 
 Radiation, taken as the product of solar radiation and slurry surface absorptivity, can only increase slurry temperature.
 Because the model simulates *average* slurry temperature, and does not explicitly include heat loss by radiation, the absorptivity value is effectively a net value.
