@@ -16,7 +16,7 @@ stm <IDxx> <par_file_name> <user_par_file_name>
 ```
 
 Compiled versions for Linux (stm) and Windows (stm.exe) are included in the root directory.
-To use the example calls given in this document in Windows, change stm to stm.exe and ./ to .\.
+To use the example calls given in this document in Windows, change stm to stm.exe and ./ to .\\.
 For examples (Windows and Linux) see the `applications` directory (the latest examples are in `STM/applications/CH4_2021/examples`).
 
 Continuing with some guidance on using the program. . .
