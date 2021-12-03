@@ -9,26 +9,55 @@ On Linux with the GNU Fortran 95 compiler, it can be compiled with the following
 ```
 gfortran stm.f90 -o stm
 ```
-If compiled to `stm` (as from above command), then:
-stm <IDxx> <par_file_name> <user_par_file_name> <weather_file_name>
+If compiled to `stm` (as from above command), then it can be run with this command, for example:
 
-IDxx is a 4 character run ID code.
-For example:
+```
+stm <IDxx> <par_file_name> <user_par_file_name>
+```
 
+`IDxx` is a 4 character run ID code.
+For example, an actual call might lok like this:
+
+```
 ./stm 10Cn pars.txt user_pars.txt
+```
 
-The model can be called with no files (and default names will be used, with weather calculated), with just the 2 parameter files (and calculated weather), or with all three files. 
-See par and weather files in main directory for details on contents.
+The model can be called with no files (and default names will be used, with weather calculated), with just the 2 parameter files (as in all the example above), or with two additional optional files.
+With only the two parameter files (as in above example), weather and slurry level variables are calculated from the settings in the user parameter file.
+To use measured weather instead, add a weather file to the call:
+
+```
+stm <IDxx> <par_file_name> <user_par_file_name> <weather_file_name>
+```
+
+The weather file should contain at least these three columns, in this order: day of year, temperature, and average global solar radiation (W/m2).
+The file is assumed to have a header row (ignored by the program) and can be whitespace- or comma-delimited.
+
+Slurry level can be set in an additional file, containing at least two columns: day of year, and slurry level (depth) in m.
+The only required day of year is 1 (January 1), which is assumed to be the value on the last day of the year also.
+The model will use linear interpolation to fill in other days.
+Any increase is taken as slurry addition, and decrease removal.
+
+```
+stm <IDxx> <par_file_name> <user_par_file_name> <weather_file_name> <slurry_level_file_name>
+```
+
+As with the weather file, slurry level can be in a whitespace- or comma-delimited file.
 
 # Inputs
-Set inputs in user_pars.txt. Help on calculating parameter values can be found in the par_calc directory. The pars.txt file has parameters directly related to heat transfer and storage, including heat capacity and convection coefficients. Ideally these values would not be regularly changed, but determination of the values of some is challenging.
+Set inputs in user_pars.txt. 
+Help on calculating parameter values can be found in the par_calc directory. 
+The pars.txt file has parameters directly related to heat transfer and storage, including heat capacity and heat transfer coefficients. 
+Ideally these values would not be regularly changed, but determination of some is challenging.
   
 # Outputs
-Files are created for temperature, weather, and heat transfer rates. See application directories for examples.
+Files are created for temperature, weather, and heat transfer rates. 
+See the directories in `applications` for examples.
 
 # Model description
 The model predicts the average temperature of slurry within a storage structure.
 Fresh slurry is added at a fixed rate, and (optionally) removed on one or two days of the year.
+Or, by specifying the slurry level, more complicated or irregular management can be simulated.
 
 ## Heat flow
 Heat flows included are shown in the crude diagram below, where straight lines represent conduction and convection, and `}` represents radiation.
