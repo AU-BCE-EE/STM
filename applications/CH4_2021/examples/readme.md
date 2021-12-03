@@ -16,7 +16,7 @@ For example 1, the contents are:
 REM Batch file to run example 1 on Windows
 REM This example uses measured weather and slurry level
 
-.\stm.exe 0001 pars.txt Back_u_pars.txt Uppsala_weather.txt Back_level.txt
+.\stm.exe 0001 pars.txt Back_u_pars.txt Uppsala_weather.csv Back_level.csv
 ```
 
 This file can be run by double-clicking.
@@ -43,6 +43,11 @@ The main parameter file has a default name of pars.txt.
 The "user parameter" file has a default name of user_pars.txt.
 Parameters are described within the files.
 Any value can be changed to see the effect on results--just be sure to keep the line spacing constant and to save the file before running the model.
+
+Example 1 uses measured slurry level and weather as model inputs, and example 2 uses calculated level but measured weather.
+(In example 3, both weather and slurry level are calculated based on settings in user_pars.txt.)
+These weather and level files could be whitespace- (spaces or tabs) or comma-delimited.
+To demonstrate, they are comma-delimited in example 1, but whitespace-delimited in example 2. 
 
 # Output
 The program creates three output files: `ID_rates.txt`, `ID_temp.txt`, and `ID_weather.txt`, where `ID` = the run ID provided in the command for running the model. 
