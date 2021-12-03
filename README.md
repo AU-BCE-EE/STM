@@ -83,7 +83,7 @@ Heat flows included are shown in the crude diagram below, where straight lines r
 ```
 
 The horizontal line on the right shows the soil surface.
-The temperature of the components in CAPS determine heat transfer rates, while others influence only resitance to heat transfer.
+The temperature of the components in CAPS determine heat transfer rates, while others influence only resistance to heat transfer.
 So, for example, heat transfer through the floor is determined by the sum of slurry, floor, and soil resistance, and the temperature difference between the soil (not the floor) and slurry.
 
 The model is effectively zero-dimensional, using a lumped capacitance approach.
