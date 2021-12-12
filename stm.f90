@@ -85,6 +85,7 @@ PROGRAM stm
   REAL :: Rair, Rconc, Rslur, Rsoil ! Entered resistance terms K-m2/W
   REAL :: Ruwall, Rdwall, Rfloor, Rtop ! Calculated resistance K-m2/W 
   REAL :: cpSlurry       ! Heat capacity of slurry J/kg-K
+  REAL :: cpLiquid, cpFrozen  ! Heat capacity of liquid or frozen slurry J/kg-K
   REAL :: hfSlurry       ! Latent heat of fusion of slurry J/kg
   REAL :: dSlurry        ! Density of slurry kg/m3
   REAL :: soilDamp       ! Soil damping depth, where averaging period reaches 1 full yr, in m
@@ -209,7 +210,8 @@ PROGRAM stm
   READ(2,*) 
   READ(2,*) 
   READ(2,*) 
-  READ(2,*) dSlurry, cpSlurry, hfSlurry
+  READ(2,*) 
+  READ(2,*) dSlurry, cpLiquid, cpFrozen, hfSlurry
   READ(2,*) 
   READ(2,*) 
   READ(2,*) Rair, Rconc, Rslur, Rsoil
@@ -386,6 +388,7 @@ PROGRAM stm
 
   ! Set initial slurry temperature
   tempSlurry = tempInitial
+  cpSlurry = cpLiquid
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Start simulation
@@ -476,12 +479,13 @@ PROGRAM stm
     
       ! Calculate heat transfer rates, all in watts (J/s)
       ! Qfeed is hypothetical rate pretending to make up difference relative to new mass at tempSlurry
+      ! Assume feed is always liquid
       IF (.NOT. constantTempIn) THEN
         ! Overwrite feed temperature if there is no heat transfer in feed
         tempIn = tempSlurry
       END IF
       ! J/s               K           kg/t      t/d     / s/d    *  J/kg-K   
-      Qfeed = (tempSlurry - tempIn) * 1000 * slurryProd / 86400. * cpSlurry
+      Qfeed = (tempSlurry - tempIn) * 1000 * slurryProd / 86400. * cpLiquid
       ! J/s   J/s-m2-K     K               K          m2
       Qslur2air = (tempSlurry - tempAir(DOY)) / Rtop * areaAir
       Qslur2floor = (tempSlurry - tempFloor(DOY)) / Rfloor * areaFloor
@@ -498,7 +502,7 @@ PROGRAM stm
       HHadj = HH + 1000. * massFrozen * hfSlurry
       massFrozen = 0.0
 
-      ! Potential temperature change (omitting latent energy for now)
+      ! Potential temperature change (omitting latent energy and assuming liquid slurry for now)
       dTemp = - HHadj / (1000. * cpSlurry * massSlurry)
 
       ! Freeze and thaw
@@ -522,9 +526,8 @@ PROGRAM stm
         END IF
       END IF
 
-      !!! Weighted cp
-      !!! Not implemented because cp needs to be used below in tempSS calc and I have to think about what makes sense
-      !!cpSlurry = massFrozen / massSlurry * cpFrozen + (1.0 - massFrozen / massSlurry) * cpLiquid
+      ! Weighted cp
+      cpSlurry = massFrozen / massSlurry * cpFrozen + (1.0 - massFrozen / massSlurry) * cpLiquid
 
       ! Recalculate dT, now actual temperature change
       dTemp = - HHadj / (1000. * cpSlurry * massSlurry)
@@ -532,8 +535,8 @@ PROGRAM stm
       
       ! Steady-state temperature
       tempSS = (tempAir(DOY)/Rtop*areaAir + tempFloor(DOY)/Rfloor*areaFloor + tempWall(DOY)/Rdwall*areaDwall + &
-        & tempAir(DOY)/Ruwall*areaUwall + (1000. * slurryProd / 86400. * cpSlurry * tempIn) - Qrad) / &
-        & (areaAir/Rtop + areaFloor/Rfloor + areaDwall/Rdwall + areaUwall/Ruwall + (1000. * slurryProd / 86400. * cpSlurry))
+        & tempAir(DOY)/Ruwall*areaUwall + (1000. * slurryProd / 86400. * cpLiquid * tempIn) - Qrad) / &
+        & (areaAir/Rtop + areaFloor/Rfloor + areaDwall/Rdwall + areaUwall/Ruwall + (1000. * slurryProd / 86400. * cpLiquid))
 
       ! Limit change in temperature to change to SS temp
       IF (dTemp > 0. .AND. tempSlurry > tempSS) THEN
