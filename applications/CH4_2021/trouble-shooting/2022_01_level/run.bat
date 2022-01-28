@@ -1,4 +1,3 @@
-REM Batch file to run example 1 on Windows
-REM This example uses measured weather and slurry level
+REM Batch file to run problematic simulation on Windows
 
-.\stm.exe 0001 pars.txt Back_u_pars.txt Uppsala_weather.csv Back_level.csv
+.\stm.exe DK01 pars.txt DK_Back_u_pars.txt Tjele_weather.txt DK_level.txt
