@@ -159,10 +159,10 @@ PROGRAM stm
   OPEN (UNIT=1, FILE=userParFile, STATUS='OLD')
   OPEN (UNIT=2, FILE=parFile, STATUS='OLD')
   IF (.NOT. calcWeather) THEN
-    OPEN (UNIT=3, FILE=weatherFile, STATUS='UNKNOWN')
+    OPEN (UNIT=3, FILE=weatherFile, STATUS='OLD')
   END IF
   IF (.NOT. fixedFill) THEN
-    OPEN (UNIT=4, FILE=levelFile, STATUS='UNKNOWN')
+    OPEN (UNIT=4, FILE=levelFile, STATUS='OLD')
   END IF
 
   ! Output files, name based on ID
