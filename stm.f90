@@ -115,7 +115,12 @@ PROGRAM stm
   ! Other parameters
   REAL, PARAMETER :: PI = 3.1415927
   REAL, PARAMETER :: soilFreezeDiv = 1.0  ! Fudge factor for soil freezing
+
+  ! Date and time
+  INTEGER, DIMENSION(8) :: dt 
+  CHARACTER (LEN = 10) :: date
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Get file names from call
@@ -143,7 +148,6 @@ PROGRAM stm
     calcWeather = .FALSE.
     fixedFill = .FALSE.
   ELSE
-    WRITE(*,*) 'No file names given so 2 default parameter files will be used, with calculated weather and ID 0001.'
     parFile = 'pars.txt'
     userParFile = 'user_pars.txt'
     ID = '0001'
@@ -166,9 +170,12 @@ PROGRAM stm
   END IF
 
   ! Output files, name based on ID
-  OPEN (UNIT=10,FILE=(''//ID//'_temp.txt'),STATUS='UNKNOWN')
-  OPEN (UNIT=11,FILE=(''//ID//'_rates.txt'),STATUS='UNKNOWN')
-  OPEN (UNIT=12,FILE=(''//ID//'_weather.txt'),STATUS='UNKNOWN')
+  OPEN (UNIT=10,FILE=(''//ID//'_temp.txt'), STATUS='UNKNOWN')
+  OPEN (UNIT=11,FILE=(''//ID//'_rates.txt'), STATUS='UNKNOWN')
+  OPEN (UNIT=12,FILE=(''//ID//'_weather.txt'), STATUS='UNKNOWN')
+
+  ! Log file, name based on ID
+  OPEN (UNIT=20,FILE=(''//ID//'_log.txt'), STATUS='UNKNOWN')
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -231,6 +238,43 @@ PROGRAM stm
 
   WRITE(12,*) 'Day of  Day of Year Air   Radiation'
   WRITE(12,*) 'sim.     year        T'
+
+ 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Output and log files
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Output files, name based on ID
+  OPEN (UNIT=10,FILE=(''//ID//'_temp.txt'), STATUS='UNKNOWN')
+  OPEN (UNIT=11,FILE=(''//ID//'_rates.txt'), STATUS='UNKNOWN')
+  OPEN (UNIT=12,FILE=(''//ID//'_weather.txt'), STATUS='UNKNOWN')
+
+  ! Log file, name based on ID
+  OPEN (UNIT=20,FILE=(''//ID//'_log.txt'), STATUS='UNKNOWN')
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Start log file
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  WRITE(20,*) 'Starting STM model . . . '
+  CALL DATE_AND_TIME(DATE = date, VALUES = dt)
+  WRITE(20,'(I4, 5(A, I2.2))') dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
+  WRITE(20,*) 
+  IF (numArgs .EQ. 0) THEN
+    WRITE(20,*) 'No file names specified, so using defaults.'
+  END IF
+  WRITE(20,*) 'Simulation ID: ', ID
+  WRITE(20,*) 'User par file: ', userParFile
+  WRITE(20,*) 'Par file: ', parFile
+  IF (calcWeather) THEN
+    WRITE(20,*) 'Weather is calculated (no input file)'
+  ELSE 
+    WRITE(20,*) 'Weather file: ', weatherFile
+  END IF
+  IF (fixedFill) THEN
+    WRITE(20,*) 'Slurry level is calculated (no input file)'
+  ELSE 
+    WRITE(20,*) 'Level file: ', levelFile
+  END IF
+  WRITE(20,*) 
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Initial calculations
@@ -242,7 +286,7 @@ PROGRAM stm
   ELSE IF (tempInSetting .EQ. 'No') THEN
     constantTempIn = .FALSE.
   ELSE
-    WRITE(*,*) "Error: Addes slurry temperature description not recognized. Must be Constant or None. Stopping."
+    WRITE(20,*) "Error: Addes slurry temperature description not recognized. Must be Constant or None. Stopping."
     STOP
   END IF
 
@@ -362,7 +406,7 @@ PROGRAM stm
     READ(4,*) DOY, level(1)
     levelPrev = level(1)
     IF (DOY .NE. 1.) THEN
-      WRITE(*,*) "Error: First day of year *must* be 1 in level file! Stopping."
+      WRITE(20,*) "Error: First day of year *must* be 1 in level file! Stopping."
       STOP
     END IF
     DOYprev = 1
@@ -472,9 +516,9 @@ PROGRAM stm
       END IF
 
       ! Check slurry depth
-      IF (slurryDepth .GT. 1.01 * storeDepth) THEN
-        WRITE(*,*) "Slurry depth is greater than maximum depth! Stopping. Check inputs."
-        STOP
+      IF (slurryDepth .GT. storeDepth) THEN
+        WRITE(20,*) 'Warning: day of year ', DOY, ', hour', hr, ', Slurry depth is greater than maximum depth! Check inputs.'
+        WRITE(20,*)
       END IF
     
       ! Calculate heat transfer rates, all in watts (J/s)
@@ -563,6 +607,11 @@ PROGRAM stm
     WRITE(12,"(1X,I4,5X,I3,5X,I4,1X,2F15.0)") DOS, DOY, YR, tempAir(DOY), solRad(DOY)
     
   END DO
+
+  WRITE(20,*)
+  WRITE(20,*) 'Done!'
+  CALL DATE_AND_TIME(DATE = date, VALUES = dt)
+  WRITE(20,'(I4, 5(A, I2.2))') dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Close files
