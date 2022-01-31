@@ -1,5 +1,5 @@
  Starting STM model . . . 
-2022/01/30 06:33:00
+2022/01/31 06:32:35
 
  No file names specified, so using defaults.
  Simulation ID: 0001
@@ -10,4 +10,4 @@
 
 
  Done!
-2022/01/30 06:33:00
+2022/01/31 06:32:35

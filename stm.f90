@@ -178,6 +178,43 @@ PROGRAM stm
   OPEN (UNIT=20,FILE=(''//ID//'_log.txt'), STATUS='UNKNOWN')
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   
+ 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Output and log files
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Output files, name based on ID
+  OPEN (UNIT=10,FILE=(''//ID//'_temp.txt'), STATUS='UNKNOWN')
+  OPEN (UNIT=11,FILE=(''//ID//'_rates.txt'), STATUS='UNKNOWN')
+  OPEN (UNIT=12,FILE=(''//ID//'_weather.txt'), STATUS='UNKNOWN')
+
+  ! Log file, name based on ID
+  OPEN (UNIT=20,FILE=(''//ID//'_log.txt'), STATUS='UNKNOWN')
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Start log file
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  WRITE(20,*) 'Starting STM model . . . '
+  CALL DATE_AND_TIME(DATE = date, VALUES = dt)
+  WRITE(20,'(I4, 5(A, I2.2))') dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
+  WRITE(20,*) 
+  IF (numArgs .EQ. 0) THEN
+    WRITE(20,*) 'No file names specified, so using defaults.'
+  END IF
+  WRITE(20,*) 'Simulation ID: ', ID
+  WRITE(20,*) 'User par file: ', userParFile
+  WRITE(20,*) 'Par file: ', parFile
+  IF (calcWeather) THEN
+    WRITE(20,*) 'Weather is calculated (no input file)'
+  ELSE 
+    WRITE(20,*) 'Weather file: ', weatherFile
+  END IF
+  IF (fixedFill) THEN
+    WRITE(20,*) 'Slurry level is calculated (no input file)'
+  ELSE 
+    WRITE(20,*) 'Level file: ', levelFile
+  END IF
+  WRITE(20,*) 
+
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Read parameters
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -239,42 +276,6 @@ PROGRAM stm
   WRITE(12,*) 'Day of  Day of Year Air   Radiation'
   WRITE(12,*) 'sim.     year        T'
 
- 
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! Output and log files
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! Output files, name based on ID
-  OPEN (UNIT=10,FILE=(''//ID//'_temp.txt'), STATUS='UNKNOWN')
-  OPEN (UNIT=11,FILE=(''//ID//'_rates.txt'), STATUS='UNKNOWN')
-  OPEN (UNIT=12,FILE=(''//ID//'_weather.txt'), STATUS='UNKNOWN')
-
-  ! Log file, name based on ID
-  OPEN (UNIT=20,FILE=(''//ID//'_log.txt'), STATUS='UNKNOWN')
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! Start log file
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  WRITE(20,*) 'Starting STM model . . . '
-  CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(I4, 5(A, I2.2))') dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
-  WRITE(20,*) 
-  IF (numArgs .EQ. 0) THEN
-    WRITE(20,*) 'No file names specified, so using defaults.'
-  END IF
-  WRITE(20,*) 'Simulation ID: ', ID
-  WRITE(20,*) 'User par file: ', userParFile
-  WRITE(20,*) 'Par file: ', parFile
-  IF (calcWeather) THEN
-    WRITE(20,*) 'Weather is calculated (no input file)'
-  ELSE 
-    WRITE(20,*) 'Weather file: ', weatherFile
-  END IF
-  IF (fixedFill) THEN
-    WRITE(20,*) 'Slurry level is calculated (no input file)'
-  ELSE 
-    WRITE(20,*) 'Level file: ', levelFile
-  END IF
-  WRITE(20,*) 
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Initial calculations
