@@ -195,6 +195,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,*) 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
+  WRITE(20,*) 'STM version 0.1'
   WRITE(20,'(I4, 5(A, I2.2))') dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,*) 
   IF (numArgs .EQ. 0) THEN
