@@ -1,0 +1,12 @@
+ Starting STM model . . . 
+2022/01/31 05:58:04
+ 
+ Simulation ID: 0001
+ User par file: Back_u_pars.txt               
+ Par file: pars.txt                      
+ Weather file: Uppsala_weather.csv           
+ Level file: Back_level.csv                
+ 
+ 
+ Done!
+2022/01/31 05:58:04
