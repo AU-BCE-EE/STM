@@ -1,0 +1,13 @@
+ Starting STM model . . . 
+ STM version 0.1
+2022/02/15 12:36:18
+
+ Simulation ID: 0001
+ User par file: user_pars.txt                 
+ Par file: pars.txt                      
+ Weather is calculated (no input file)
+ Slurry level is calculated (no input file)
+
+
+ Done!
+2022/02/15 12:36:18
