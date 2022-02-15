@@ -89,6 +89,7 @@ PROGRAM stm
   REAL :: hfSlurry       ! Latent heat of fusion of slurry J/kg
   REAL :: dSlurry        ! Density of slurry kg/m3
   REAL :: soilDamp       ! Soil damping depth, where averaging period reaches 1 full yr, in m
+  REAL :: heatGen        ! Slurry heat generation term W/m3 
 
   ! Heat flow variables in W out of slurry
   REAL :: Qrad           ! "To" sun
@@ -96,6 +97,7 @@ PROGRAM stm
   REAL :: Qslur2wall, Qslur2dwall, Qslur2uwall   ! Out through wall (to air or soil)
   REAL :: Qslur2floor    ! Out through floor to soil
   REAL :: Qfeed          ! Loss due to feeding
+  REAL :: Qgen           ! Heat generation
   REAL :: Qout           ! Total
   REAL :: QoutPart       ! Total after some use for melting/freezing
   REAL :: sumQout        ! Sum of total for average
@@ -263,16 +265,16 @@ PROGRAM stm
   READ(2,*) 
   READ(2,*) 
   READ(2,*) 
-  READ(2,*) absorp, soilDamp
+  READ(2,*) absorp, soilDamp, heatGen
 
   ! Output file header
   WRITE(10,*) 'Day of  Day of    Year   Slurry  Frozen  Slurry   Air    Wall   Floor    Slurry'
   WRITE(10,*) 'sim.     year             mass    mass   depth     T      T       T        T'
  
 
-  WRITE(11,*) 'Day of  Day of              -------------Heat flow rates out in W----------------------------------------------'
-  WRITE(11,*) 'sim.     year     Year    Radiation    Air       Floor   Lower wall  Upper wall   Feed      Total    Total ave. &  
-    &      HH            HHave          HHadj         HHadjave   SST      SS'
+  WRITE(11,*) 'Day of  Day of              -----------------------Heat flow rates out in W------------------------------------'
+  WRITE(11,*) 'sim.     year     Year    Radiation    Generation   Air       Floor   Lower wall  Upper wall   Feed      Total  & 
+    &         Total ave.  HH            HHave          HHadj         HHadjave   SST      SS'
 
   WRITE(12,*) 'Day of  Day of Year Air   Radiation'
   WRITE(12,*) 'sim.     year        T'
@@ -537,9 +539,11 @@ PROGRAM stm
       Qslur2floor = (tempSlurry - tempFloor(DOY)) / Rfloor * areaFloor
       Qslur2dwall = (tempSlurry - tempWall(DOY)) / Rdwall * areaDwall
       Qslur2uwall = (tempSlurry - tempAir(DOY)) / Ruwall * areaUwall
+      ! J/s      J/s-m3  *  t        /   kg/m3 * kg/t
+      Qgen = - heatGen * massSlurry / dSlurry * 1000.
       ! W
       Qslur2wall = Qslur2dwall + Qslur2uwall
-      Qout = Qfeed + Qrad + Qslur2air + Qslur2wall + Qslur2floor
+      Qout = Qfeed + Qrad + Qslur2air + Qslur2wall + Qslur2floor + Qgen
       ! HH in J
       !J =  W   *  s/h  * h
       HH = Qout * 3600. * 1.
@@ -581,7 +585,7 @@ PROGRAM stm
       
       ! Steady-state temperature
       tempSS = (tempAir(DOY)/Rtop*areaAir + tempFloor(DOY)/Rfloor*areaFloor + tempWall(DOY)/Rdwall*areaDwall + &
-        & tempAir(DOY)/Ruwall*areaUwall + (1000. * slurryProd / 86400. * cpLiquid * tempIn) - Qrad) / &
+        & tempAir(DOY)/Ruwall*areaUwall + (1000. * slurryProd / 86400. * cpLiquid * tempIn) - Qrad - Qgen) / &
         & (areaAir/Rtop + areaFloor/Rfloor + areaDwall/Rdwall + areaUwall/Ruwall + (1000. * slurryProd / 86400. * cpLiquid))
 
       ! Limit change in temperature to change to SS temp
@@ -603,7 +607,7 @@ PROGRAM stm
     WRITE(10,"(1X,I4,5X,I3,5X,I4,1X,8F8.2)") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
         & tempWall(DOY), tempFloor(DOY), sumTempSlurry/24
 
-    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,8F11.3,4F15.0,1X,1F5.2,2X,L5)") DOS, DOY, YR, Qrad, Qslur2air, Qslur2floor, Qslur2dwall, &
+    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,9F11.3,4F15.0,1X,1F5.2,2X,L5)") DOS, DOY, YR, Qrad, Qgen, Qslur2air, Qslur2floor, Qslur2dwall, &
         & Qslur2uwall, Qfeed, Qout, sumQout/24., HH, sumHH/24., HHadj, sumHHadj/24., tempSS, useSS
 
     WRITE(12,"(1X,I4,5X,I3,5X,I4,1X,2F15.0)") DOS, DOY, YR, tempAir(DOY), solRad(DOY)
