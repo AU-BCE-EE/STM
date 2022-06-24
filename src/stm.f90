@@ -118,6 +118,9 @@ PROGRAM stm
   REAL, PARAMETER :: PI = 3.1415927
   REAL, PARAMETER :: soilFreezeDiv = 1.0  ! Fudge factor for soil freezing
 
+  ! Timer
+  integer :: ttbeginning = 0, ttend = 0, ttrate = 0
+
   ! Date and time
   INTEGER, DIMENSION(8) :: dt 
   CHARACTER (LEN = 10) :: date
@@ -191,6 +194,9 @@ PROGRAM stm
 
   ! Log file, name based on ID
   OPEN (UNIT=20,FILE=(''//ID//'_log.txt'), STATUS='UNKNOWN')
+
+  ! Start timer
+  CALL SYSTEM_CLOCK(ttbeginning, ttrate)
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Start log file
@@ -623,6 +629,10 @@ PROGRAM stm
   WRITE(20,*) 'Done!'
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
   WRITE(20,'(I4, 5(A, I2.2))') dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
+
+  ! Timer
+  CALL SYSTEM_CLOCK(ttend)
+  WRITE(20,*) 'Run time: ', real(ttend - ttbeginning) / real(ttrate), ' seconds'
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Close files
