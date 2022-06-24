@@ -73,7 +73,7 @@ PROGRAM stm
   REAL :: trigPartRad    ! Sine part of radiation expression
   
   ! Other slurry variables
-  REAL :: massSlurry, massFrozen = 0   ! Slurry mass (Mg = 1000 kg = metric tonnes)
+  REAL :: massSlurry, massSlurryInit, massFrozen = 0   ! Slurry mass (Mg = 1000 kg = metric tonnes)
   REAL :: slurryVol      ! Initial slurry volume (m3) NTS not consistent name
   REAL :: slurryProd     ! Slurry production rate (= inflow = outflow) (Mg/d)
 
@@ -197,7 +197,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,*) 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,*) 'STM version 0.1'
+  WRITE(20,*) 'STM version 0.2, 24 June 2022'
   WRITE(20,'(I4, 5(A, I2.2))') dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,*) 
   IF (numArgs .EQ. 0) THEN
@@ -304,6 +304,7 @@ PROGRAM stm
     areaFloor = width*length*nStores      ! m2
   END IF
   massSlurry = slurryVol * dSlurry / 1000 ! Slurry mass is in metric tonnes = Mg = 1000 kg
+  massSlurryInit = massSlurry
 
   ! Heat transfer resistance terms R' (K-m2/W)
   Rfloor = Rslur + Rconc + Rsoil
@@ -484,9 +485,13 @@ PROGRAM stm
       ! Empty and add slurry at beginning of day
       IF (DOY == emptyDOY1 .OR. DOY == emptyDOY2) THEN
         massSlurry = residMass
-        IF (massFrozen .GT. massSlurry) THEN
-          massFrozen = massSlurry
-        END IF
+      END IF
+      ! If back at startingDOY, reset slurry mass to initial mass
+      IF (DOY == startingDOY) THEN
+        massSlurry = massSlurryInit
+      END IF
+      IF (massFrozen .GT. massSlurry) THEN
+        massFrozen = massSlurry
       END IF
     END IF
 
@@ -625,6 +630,7 @@ PROGRAM stm
   CLOSE(2)
   CLOSE(10)
   CLOSE(11)
+  CLOSE(20)
 
   STOP
 END PROGRAM stm
