@@ -1,6 +1,7 @@
 PROGRAM stm
 
   ! Simple temperature model for slurry in stores or pits in a barn
+  ! See https://github.com/sashahafner/STM for latest version
 
   IMPLICIT NONE
   
