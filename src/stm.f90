@@ -1,14 +1,6 @@
 PROGRAM stm
 
   ! Simple temperature model for slurry in stores or pits in a barn
-  ! Date           Who                         Description
-  ! 28 FEB 2015   S. Hafner                    Original code (stole some from tmad.f90)
-  ! 01 MAR 2015   S. Hafner                    Added calculation of substrate temperatures and heat transfer coefficients
-  !                                            First realistic version
-  ! 31 MAR 2015   S. Hafner                    Added option for mechanical ventilation with heating, changed calculation of air
-  !                                            temperature and substrate temperatures
-  ! 08 MAY 2015   S. Hafner                    Changed name of transport_parameters.txt to transfer_parameters.txt 
-  ! 26 May 2020   S. Hafner                    Create STM repo, will use Git for tracking development
 
   IMPLICIT NONE
   
