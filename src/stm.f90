@@ -84,6 +84,11 @@ PROGRAM stm
   REAL :: soilDamp       ! Soil damping depth, where averaging period reaches 1 full yr, in m
   REAL :: heatGen        ! Slurry heat generation term W/m3 
 
+  ! Heat flow total in J
+  REAL :: HH              ! Total heat flow out of slurry in a time step
+  REAL :: HHadj           ! Total adjusted for melting slurry in J
+  REAL :: sumHH, sumHHadj ! Sum for average
+
   ! Heat flow variables in W out of slurry
   REAL :: Qrad           ! "To" sun
   REAL :: Qslur2air      ! To air
@@ -94,25 +99,20 @@ PROGRAM stm
   REAL :: Qout           ! Total
   REAL :: QoutPart       ! Total after some use for melting/freezing
   REAL :: sumQout        ! Sum of total for average
-  REAL :: sumHH, sumHHadj ! Sum for average
 
-  ! Heat flow total
-  REAL :: HH             ! Total heat flow out of slurry in a time step
-  REAL :: HHadj          ! Total adjusted for melting slurry in J
-
-  LOGICAL :: calcWeather ! .TRUE. when weather inputs are calculated (otherwise read from file)
-  LOGICAL :: fixedFill   ! .TRUE. when slurry is added at a fixed rate, specified in user par file
-  LOGICAL :: useSS       ! .TRUE. when steady-state temperature was used at some point within a day
+  LOGICAL :: calcWeather     ! .TRUE. when weather inputs are calculated (otherwise read from file)
+  LOGICAL :: fixedFill       ! .TRUE. when slurry is added at a fixed rate, specified in user par file
+  LOGICAL :: useSS           ! .TRUE. when steady-state temperature was used at some point within a day
   LOGICAL :: constantTempIn  ! .TRUE. when temperature of added slurry is constant and added slurry brings heat energy in
 
   CHARACTER (LEN = 2) tempInSetting
 
   ! Other parameters
   REAL, PARAMETER :: PI = 3.1415927
-  REAL, PARAMETER :: soilFreezeDiv = 1.0  ! Fudge factor for soil freezing
+  REAL, PARAMETER :: soilFreezeDiv = 1.0  ! Fudge factor for soil freezing (1.0 means it has no effect)
 
   ! Timer
-  integer :: ttbeginning = 0, ttend = 0, ttrate = 0
+  INTEGER :: ttbeginning = 0, ttend = 0, ttrate = 0
 
   ! Date and time
   INTEGER, DIMENSION(8) :: dt 
@@ -167,23 +167,13 @@ PROGRAM stm
     OPEN (UNIT=4, FILE=levelFile, STATUS='OLD')
   END IF
 
-  ! Output files, name based on ID
-  OPEN (UNIT=10,FILE=(''//ID//'_temp.txt'), STATUS='UNKNOWN')
-  OPEN (UNIT=11,FILE=(''//ID//'_rates.txt'), STATUS='UNKNOWN')
-  OPEN (UNIT=12,FILE=(''//ID//'_weather.txt'), STATUS='UNKNOWN')
-
-  ! Log file, name based on ID
-  OPEN (UNIT=20,FILE=(''//ID//'_log.txt'), STATUS='UNKNOWN')
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  
- 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Output and log files
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Output files, name based on ID
-  OPEN (UNIT=10,FILE=(''//ID//'_temp.txt'), STATUS='UNKNOWN')
-  OPEN (UNIT=11,FILE=(''//ID//'_rates.txt'), STATUS='UNKNOWN')
-  OPEN (UNIT=12,FILE=(''//ID//'_weather.txt'), STATUS='UNKNOWN')
+  OPEN (UNIT=10,FILE=(''//ID//'_temp.csv'), STATUS='UNKNOWN')
+  OPEN (UNIT=11,FILE=(''//ID//'_rates.csv'), STATUS='UNKNOWN')
+  OPEN (UNIT=12,FILE=(''//ID//'_weather.csv'), STATUS='UNKNOWN')
 
   ! Log file, name based on ID
   OPEN (UNIT=20,FILE=(''//ID//'_log.txt'), STATUS='UNKNOWN')
@@ -194,26 +184,26 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Start log file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  WRITE(20,*) 'Starting STM model . . . '
+  WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,*) 'STM version 0.2, 24 June 2022'
-  WRITE(20,'(I4, 5(A, I2.2))') dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
-  WRITE(20,*) 
+  WRITE(20,'(A)') 'STM version 0.3, 6 July 2022'
+  WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
+  WRITE(20,'(A)') 
   IF (numArgs .EQ. 0) THEN
-    WRITE(20,*) 'No file names specified, so using defaults.'
+    WRITE(20,'(A)') 'No file names specified, so using defaults.'
   END IF
-  WRITE(20,*) 'Simulation ID: ', ID
-  WRITE(20,*) 'User par file: ', userParFile
-  WRITE(20,*) 'Par file: ', parFile
+  WRITE(20,'(2A)') 'Simulation ID: ', ID
+  WRITE(20,'(2A)') 'User par file: ', userParFile
+  WRITE(20,'(2A)') 'Par file: ', parFile
   IF (calcWeather) THEN
-    WRITE(20,*) 'Weather is calculated (no input file)'
+    WRITE(20,'(A)') 'Weather is calculated (no input file)'
   ELSE 
-    WRITE(20,*) 'Weather file: ', weatherFile
+    WRITE(20,'(2A)') 'Weather file: ', weatherFile
   END IF
   IF (fixedFill) THEN
-    WRITE(20,*) 'Slurry level is calculated (no input file)'
+    WRITE(20,'(A)') 'Slurry level is calculated (no input file)'
   ELSE 
-    WRITE(20,*) 'Level file: ', levelFile
+    WRITE(20,'(2A)') 'Level file: ', levelFile
   END IF
   WRITE(20,*) 
 
@@ -267,16 +257,20 @@ PROGRAM stm
   READ(2,*) absorp, soilDamp, heatGen
 
   ! Output file header
-  WRITE(10,*) 'Day of  Day of    Year   Slurry  Frozen  Slurry   Air    Wall   Floor    Slurry'
-  WRITE(10,*) 'sim.     year             mass    mass   depth     T      T       T        T'
+  WRITE(10,*) 'Day of sim.,Day of year,Year,Slurry mass,Frozen mass,Slurry depth,Air T,Wall T,Floor T,Slurry T'
+  WRITE(10,*) ',,,(Mg = 1000 kg),(Mg = 1000 kg),(m),(deg. C),(deg. C),(deg. C),(deg. C)'
+  WRITE(10,*) 'day,doy,year,slurry_mass,frozen_mass,slurry_depth,air_temp,wall_temp,floor_temp,slurry_temp'
  
 
-  WRITE(11,*) 'Day of  Day of              -----------------------Heat flow rates out in W------------------------------------'
-  WRITE(11,*) 'sim.     year     Year    Radiation    Generation   Air       Floor   Lower wall  Upper wall   Feed      Total  & 
-    &         Total ave.  HH            HHave          HHadj         HHadjave   SST      SS'
+  WRITE(11,*) 'Day of sim.,Day of year,Year,Radiation,Generation,Air,Floor,Lower wall,Upper wall,Feed,Total,Total step,&
+    &          Total step adjusted,Steady state temp,Steady state used'
+  WRITE(11,*) ',,,(W),(W),(W),(W),(W),(W),(W),(W),(J),(J),,'
+  WRITE(11,*) 'day,doy,year,rad,gen,air,floor,lower_wall,upper_wall,feed,total,total_step,total_adjusted,&
+    &          steady_state_used,steady_state_temp'
 
-  WRITE(12,*) 'Day of  Day of Year Air   Radiation'
-  WRITE(12,*) 'sim.     year        T'
+  WRITE(12,*) 'Day of sim.,Day of year,Year,Air T,Radiation'
+  WRITE(12,*) ',,,(deg. C),(W/m2)'
+  WRITE(12,*) 'day,doy,year,air_temp,rad'
 
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -289,7 +283,7 @@ PROGRAM stm
   ELSE IF (tempInSetting .EQ. 'No') THEN
     constantTempIn = .FALSE.
   ELSE
-    WRITE(20,*) "Error: Addes slurry temperature description not recognized. Must be Constant or None. Stopping."
+    WRITE(20,*) "Error: Added slurry temperature description not recognized. Must be Constant or None. Stopping."
     STOP
   END IF
 
@@ -297,10 +291,10 @@ PROGRAM stm
   wallDepth = 0.5 * buriedDepth             ! m
   IF (width .EQ. 0.) THEN
     ! Circular
-    areaFloor = PI * (length / 2.)**2   ! m2
+    areaFloor = PI * (length / 2.)**2       ! m2
   ELSE 
     ! Rectangular
-    areaFloor = width*length*nStores      ! m2
+    areaFloor = width * length * nStores    ! m2
   END IF
   massSlurry = slurryVol * dSlurry / 1000 ! Slurry mass is in metric tonnes = Mg = 1000 kg
   massSlurryInit = massSlurry
@@ -608,24 +602,21 @@ PROGRAM stm
 
     END DO
 
-    WRITE(10,"(1X,I4,5X,I3,5X,I4,1X,8F8.2)") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
-        & tempWall(DOY), tempFloor(DOY), sumTempSlurry/24
+    WRITE(10,"(I4,',',I3,',',I4,7(',',F8.2))") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
+        & tempWall(DOY), tempFloor(DOY), sumTempSlurry/24.
 
-    WRITE(11,"(1X,I4,5X,I3,5X,I4,1X,9F11.3,4F15.0,1X,1F5.2,2X,L5)") DOS, DOY, YR, Qrad, Qgen, Qslur2air, Qslur2floor, Qslur2dwall, &
-        & Qslur2uwall, Qfeed, Qout, sumQout/24., HH, sumHH/24., HHadj, sumHHadj/24., tempSS, useSS
+    WRITE(11,"(I4,',',I3,',',I4,6(',',F11.3),4(',',F15.0),',',1F5.2,',',L5)") DOS, DOY, YR, Qrad, Qgen, Qslur2air, &
+        & Qslur2floor, Qslur2dwall, Qslur2uwall, Qfeed, sumQout/24., sumHH/24., sumHHadj/24., tempSS, useSS
 
-    WRITE(12,"(1X,I4,5X,I3,5X,I4,1X,2F15.0)") DOS, DOY, YR, tempAir(DOY), solRad(DOY)
+    WRITE(12,"(I4,',',I3,',',I4,2(',',F15.2))") DOS, DOY, YR, tempAir(DOY), solRad(DOY)
     
   END DO
 
-  WRITE(20,*)
-  WRITE(20,*) 'Done!'
-  CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(I4, 5(A, I2.2))') dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
+  WRITE(20,'(A)') 'Done!'
 
   ! Timer
   CALL SYSTEM_CLOCK(ttend)
-  WRITE(20,*) 'Run time: ', real(ttend - ttbeginning) / real(ttrate), ' seconds'
+  WRITE(20,'(A,1X,F8.4,1X,A)') 'Run time: ', real(ttend - ttbeginning) / real(ttrate), ' seconds'
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Close files
