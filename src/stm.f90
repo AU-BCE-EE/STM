@@ -186,7 +186,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.3, 6 July 2022'
+  WRITE(20,'(A)') 'STM version 0.4, 15 July 2022'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   IF (numArgs .EQ. 0) THEN
@@ -257,20 +257,20 @@ PROGRAM stm
   READ(2,*) absorp, soilDamp, heatGen
 
   ! Output file header
-  WRITE(10,*) 'Day of sim.,Day of year,Year,Slurry mass,Frozen mass,Slurry depth,Air T,Wall T,Floor T,Slurry T'
-  WRITE(10,*) ',,,(Mg = 1000 kg),(Mg = 1000 kg),(m),(deg. C),(deg. C),(deg. C),(deg. C)'
-  WRITE(10,*) 'day,doy,year,slurry_mass,frozen_mass,slurry_depth,air_temp,wall_temp,floor_temp,slurry_temp'
+  WRITE(10,"(A)") 'Day of sim.,Day of year,Year,Slurry mass,Frozen mass,Slurry depth,Air T,Wall T,Floor T,Slurry T'
+  WRITE(10,"(A)") ',,,(Mg = 1000 kg),(Mg = 1000 kg),(m),(deg. C),(deg. C),(deg. C),(deg. C)'
+  WRITE(10,"(A)") 'day,doy,year,slurry_mass,frozen_mass,slurry_depth,air_temp,wall_temp,floor_temp,slurry_temp'
  
 
-  WRITE(11,*) 'Day of sim.,Day of year,Year,Radiation,Generation,Air,Floor,Lower wall,Upper wall,Feed,Total,Total step,&
+  WRITE(11,"(A)") 'Day of sim.,Day of year,Year,Radiation,Generation,Air,Floor,Lower wall,Upper wall,Feed,Total,Total step,&
     &          Total step adjusted,Steady state temp,Steady state used'
-  WRITE(11,*) ',,,(W),(W),(W),(W),(W),(W),(W),(W),(J),(J),,'
-  WRITE(11,*) 'day,doy,year,rad,gen,air,floor,lower_wall,upper_wall,feed,total,total_step,total_adjusted,&
+  WRITE(11,"(A)") ',,,(W),(W),(W),(W),(W),(W),(W),(W),(J),(J),,'
+  WRITE(11,"(A)") 'day,doy,year,rad,gen,air,floor,lower_wall,upper_wall,feed,total,total_step,total_adjusted,&
     &          steady_state_used,steady_state_temp'
 
-  WRITE(12,*) 'Day of sim.,Day of year,Year,Air T,Radiation'
-  WRITE(12,*) ',,,(deg. C),(W/m2)'
-  WRITE(12,*) 'day,doy,year,air_temp,rad'
+  WRITE(12,"(A)") 'Day of sim.,Day of year,Year,Air T,Radiation'
+  WRITE(12,"(A)") ',,,(deg. C),(W/m2)'
+  WRITE(12,"(A)") 'day,doy,year,air_temp,rad'
 
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
