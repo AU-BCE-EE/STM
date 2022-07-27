@@ -1,8 +1,8 @@
 # STM
 Simple heat transfer model for predicting the temperature of animal slurry (animal manure with < about 15% dry matter) or similar materials during storage in outdoor tanks.
 The STM repository has Fortran 90 source code (in `src`), compiled binary files for Linux and Windows (in `bin`), example input files and default parameter file (in `inputs`), and finally, a few tests ( in `tests`).
-This READEME file describes the model and the program.
-For more information on the software program and detailed example, see the [STM-applications repo]((https://github.com/sashahafner/STM-applications).
+This README file describes the model and gives a short introduction to the software program.
+For detailed examples and more information on the software program, see the [STM-applications repo]((https://github.com/sashahafner/STM-applications).
 
 # Model description
 The model predicts the average temperature of slurry within a storage structure.
@@ -10,25 +10,26 @@ Fresh slurry is added hourly at a fixed rate, and (optionally) removed on one or
 Or, by specifying the slurry level, more complicated or irregular management can be simulated.
 
 ## Heat flow
-Heat flows included are shown in the crude diagram below, where straight lines represent conduction and convection, and a couple asterisks represent radiation.
+Heat flows included are shown in the ASCII diagram below, where straight lines represent conduction and convection, and asterisks represent radiation.
 
 ```
-                      Sun
-                  AIR  *   SLURRY~removal
-                   \   *   /
-		    \__*__/
-                   |      |--Upper~wall--AIR
-(SLURRY~addition)--|SLURRY|--------------------soil~surface          
-                   |      |--Lower~wall--SOIL
-		    ------
-                      |
-                    Floor
-                      |
-                    SOIL
-
+                          Sun
+                    AIR    *   
+                      \    *    
+(SLURRY~addition)----. \   * .----SLURRY~removal
+                  || |  \  * | ||
+                  ||^^^^^^^^^^^||Upper~wall--AIR
+                  ||           ||~~~~~~~~~~~~~~~~~~~~soil~surface          
+                  ||  SLURRY   ||
+                  ||           ||Lower~wall--SOIL
+		  ===============   
+                       Floor
+                         |
+                       SOIL
 ```
 
-The horizontal line on the right shows the soil surface.
+The `~~~~~~~~~~` line on the right shows the soil surface while `^^^^^^^^^^` represents the surface of the slurry.
+Double lines `||` and `===` represent the storage structure walls. 
 The temperature of the components in CAPS determine heat transfer rates, while others influence only resistance to heat transfer.
 So, for example, heat transfer through the floor is determined by the sum of slurry, floor, and soil resistance, and the temperature difference between the soil (not the floor) and slurry.
 
@@ -44,6 +45,7 @@ Q = (T(slurry) - T(environment)) / R * A
 ```
 
 where R is the overall resistance term, and A is the cross-sectional area available for heat transfer.
+The values of A change for the wall components as the slurry level changes.
 The overall resistance term for any route is simply the sum of relevant terms.
 The model uses the following expressions.
 
@@ -66,11 +68,11 @@ Radiation may also drive evaporation.
 This heat energy consumed by the phase change does not go toward warming slurry, and so should not be expected to be included in the absorptivity value.
 
 Slurry addition may add heat energy.
-It is constant over a simulation or (if a slurry level file is used) at least a daily basis.
+Feed flow rate is constant over a simulation or (if a slurry level file is used) at least a daily basis.
 Heat transfer by slurry addition can be turned off, effectively assuming the incoming slurry has the same temperature as stored slurry.
 This a convenient when its temperature is unknown or variable.
 Slurry removal is intermittent.
-It has no immediate effect on slurry temperature (but of course reduces the heat energy content of the stored slurry).
+It has no immediate effect on slurry temperature, but of course reduces the slurry mass and therefore the heat energy content of the stored slurry.
 
 ## Numerical solution
 A simple first-order fixed time step approach is used.
@@ -91,9 +93,13 @@ With either approach, weather inputs are daily; the model does not accept nor si
 
 ## Missing components
 The model does not include:
+
 * Explicit heat loss by radiation (but see information on radiative heating above).
 * Any effects of precipitation (although specification of slurry level directly and acceptance that absorptivity excludes radiation that goes toward evaporation may address this limitation)
 * Soil freezing/thawing
+* Effects of the slurry tank on soil temperature
+
+There are no plans to include any of these at the moment; some are impractical to include in such a simple model.
 
 # Compilation
 The model code is in `src/stm.f90`.
@@ -119,14 +125,14 @@ On Windows, replace `./stm` with `stm.exe`.
 
 `<IDxx>` is a 4 character run ID or key code.
 Providing file names are optional, although the order is fixed.
-For example, an actual call might lok like this:
+For example, an actual call might look like this:
 
 ```
 ./stm sim1
 ```
 
-With no files specified default names will be used for the parameter file and "user parameter" file, with weather calculated.
-Typically, however, input file names will be gien in the call, as in the example below. 
+With no files specified STM will look for the two parameter files with default names (`pars.txt` and `user_pars.txt`), with weather and slurry level calculated.
+Typically, however, input file names will be given in the call, as in the example below. 
 
 ```
 ./stm sim2 pars.txt user_pars.txt
