@@ -1,6 +1,7 @@
 PROGRAM stm
 
-  ! Simple temperature model for slurry in stores or pits in a barn
+  ! Simple temperature model for stored slurry 
+  ! By Sasha D. Hafner
   ! See https://github.com/sashahafner/STM for latest version
 
   IMPLICIT NONE
@@ -305,7 +306,7 @@ PROGRAM stm
   Ruwall = Rslur + Rconc + Rair
   Rtop = Rslur + Rair 
 
-  ! Determine tempAir, solRad, and substrate temperatures for a complete year
+  ! Determine tempAir, solRad, and soil temperatures for each day within a complete year
   ! Start day loop
   IF (calcWeather) THEN
     DO DOY = 1,365,1
@@ -326,7 +327,7 @@ PROGRAM stm
     END DO
   END IF
 
-  ! Substrate temperature based on moving average
+  ! Soil temperature based on moving average
   wallAvePeriod = MAX(wallDepth/soilDamp*365, 1.)
   floorAvePeriod = MAX(buriedDepth/soilDamp*365, 1.)
 
@@ -334,6 +335,7 @@ PROGRAM stm
   IF (floorAvePeriod .LT. 5.) THEN
     floorAvePeriod = 5.
   END IF
+
   IF (wallAvePeriod .LT. 2.) THEN
     wallAvePeriod = 2.
   END IF
@@ -428,7 +430,7 @@ PROGRAM stm
   END IF
 
 
-  ! Set initial slurry temperature
+  ! Set initial slurry temperature and specific heat
   tempSlurry = tempInitial
   cpSlurry = cpLiquid
 
@@ -499,6 +501,8 @@ PROGRAM stm
 
     ! Set use steady state indicator to false at start of each day
     useSS = .FALSE.
+
+    ! Hour loop
     DO HR = 1,24,1
 
       ! Update slurry mass, distributing inflow evenly across day
