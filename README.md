@@ -8,7 +8,7 @@ For detailed examples and more information on the software program, see the [STM
 Binary files are provided for Linux and Windows (32 and 64 bit) in the `bin` directory.
 (Compilation on other operating systems is of course possible--see the "Compilation" section below).
 In general, "installation" is as simple as downloading the binary file (stm.exe for Windows, stm for Linux) and moving it to the directory from which you would like to call the program.
-To run [example 01[(https://github.com/sashahafner/STM-applications/tree/master/examples/01) from [STM-applications repo](https://github.com/sashahafner/STM-applications) for example, put stm.exe in the "01" subdirectory and follow the instructions in the [README file](https://github.com/sashahafner/STM-applications/blob/master/examples/01/README.md).
+To run [example 01](https://github.com/sashahafner/STM-applications/tree/master/examples/01) from [STM-applications repo](https://github.com/sashahafner/STM-applications) for example, put stm.exe in the "01" subdirectory and follow the instructions in the [README file](https://github.com/sashahafner/STM-applications/blob/master/examples/01/README.md).
 By setting the PATH variable, it is possible to run STM from any directory, although this is not necessary.
 
 On Windows, users will likely need to install some libraries to run STM; download and run the [`bin/Windows/w_ifort_runtime. . .exe`](https://github.com/sashahafner/STM/tree/master/bin/Windows) exe file.
