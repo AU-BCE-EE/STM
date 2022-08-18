@@ -4,6 +4,87 @@ The STM repository has Fortran 90 source code (in `src`), compiled binary files 
 This README file describes the model and gives a short introduction to the software program.
 For detailed examples and more information on the software program, see the [STM-applications repo](https://github.com/sashahafner/STM-applications).
 
+# Installation
+Binary files are provided for Linux and Windows (32 and 64 bit) in the `bin` directory.
+(Compilation on other operating systems is of course possible--see the "Compilation" section below).
+In general, "installation" is as simple as downloading the binary file (stm.exe for Windows, stm for Linux) and moving it to the directory from which you would like to call the program.
+To run [example 01[(https://github.com/sashahafner/STM-applications/tree/master/examples/01) from [STM-applications repo](https://github.com/sashahafner/STM-applications) for example, put stm.exe in the "01" subdirectory and follow the instructions in the [README file](https://github.com/sashahafner/STM-applications/blob/master/examples/01/README.md).
+By setting the PATH variable, it is possible to run STM from any directory, although this is not necessary.
+
+On Windows, users will likely need to install some libraries to run STM; download and run the [`bin/Windows/w_ifort_runtime. . .exe`](https://github.com/sashahafner/STM/tree/master/bin/Windows) exe file.
+Or, see [here](https://www.intel.com/content/www/us/en/developer/articles/tool/compilers-redistributable-libraries-by-version.html) for the latest versions.
+
+# Compilation
+The model code is in `src/stm.f90`.
+On Linux with the GNU Fortran 95 compiler, it can be compiled with the following command to create the the binary file `stm`.
+
+```
+gfortran stm.f90 -o stm
+```
+
+# Running STM
+For several detailed examples and some explanation, see the [STM-applications repo](https://github.com/sashahafner/STM-applications).
+A general introduction to the STM program is given here.
+
+If compiled to `stm` on Linux, STM can be run with this command:
+
+```
+./stm <IDxx> <par_file_name> <user_par_file_name> <weather_file_name> <slurry_level_file_name>
+```
+
+On Windows, replace `./stm` with `stm.exe`.
+
+`<IDxx>` is a 4 character run ID or key code.
+Providing file names are optional, although the order is fixed.
+For example, an actual call might look like this:
+
+```
+./stm sim1
+```
+
+With no files specified STM will look for the two parameter files with default names (`pars.txt` and `user_pars.txt`), with weather and slurry level calculated.
+Typically, however, input file names will be given in the call, as in the example below. 
+
+```
+./stm sim2 pars.txt user_pars.txt
+```
+
+With only the two parameter files (as in both examples above), weather and slurry level variables are calculated from the settings in the user parameter file.
+To use measured weather instead, add a weather file to the call:
+
+```
+./stm sim3 pars.txt user_pars.txt weather.csv
+```
+
+The weather file should contain these three columns, in this order: day of year (1-365), air temperature (degrees C), and average global solar radiation (W/m2).
+The file is assumed to have a header row (ignored by STM) and can be whitespace- or comma-delimited.
+
+Slurry level can be specified in an additional file, containing two columns: day of year and slurry level (depth, m).
+The only required day of year is 1 (January 1), and the level is assumed to be the same on the last day of the year also.
+The model will use linear interpolation to fill in other days.
+Any increase is taken as slurry addition, and decrease removal.
+
+```
+./stm sim4 pars.txt user_pars.txt weather.csv slurry_level.csv
+```
+
+As with the weather file, slurry level can be in a whitespace- or comma-delimited file.
+
+# Inputs
+Example input files can be found in the `inputs` directory.
+Inputs in the two "parameter" files have a fixed structure by row, so don't delete or add rows.
+The main parameter file, `pars.txt` in the examples above, has parameters directly related to heat transfer and storage, including heat capacity and heat transfer coefficients. 
+Ideally these values would not be regularly changed, but determination of some is challenging.
+See the [STM-applications repo]((https://github.com/sashahafner/STM-applications) for default values and information on how they were determined.
+  
+# Outputs
+Comma-separated output files are created for temperature, weather, and heat transfer rates. 
+See the `tests` directory for examples.
+
+# Bugs and more
+If you find a problem in STM or this repo please create an [issue](https://github.com/sashahafner/STM-applications/issues).
+If you are familiar with Fortran, please feel free to make some edits and create a pull request!
+
 # Model description
 The model predicts the average temperature of slurry within a storage structure.
 Fresh slurry is added hourly at a fixed rate, and (optionally) removed on one or two days of the year.
@@ -101,76 +182,5 @@ The model does not include:
 
 There are no plans to include any of these at the moment; some are impractical to include in such a simple model.
 
-# Compilation
-The model code is in `src/stm.f90`.
-On Linux with the GNU Fortran 95 compiler, it can be compiled with the following command to create the the binary file `stm`.
 
-```
-gfortran stm.f90 -o stm
-```
-
-Binary files are provided for Linux and Windows, and compilation on other operating systems is of course possible.
-
-# Running STM
-For several detailed examples and some explanation, see the [STM-applications repo](https://github.com/sashahafner/STM-applications).
-A general introduction to the STM program is given here.
-
-If compiled to `stm` on Linux, STM can be run with this command:
-
-```
-./stm <IDxx> <par_file_name> <user_par_file_name> <weather_file_name> <slurry_level_file_name>
-```
-
-On Windows, replace `./stm` with `stm.exe`.
-
-`<IDxx>` is a 4 character run ID or key code.
-Providing file names are optional, although the order is fixed.
-For example, an actual call might look like this:
-
-```
-./stm sim1
-```
-
-With no files specified STM will look for the two parameter files with default names (`pars.txt` and `user_pars.txt`), with weather and slurry level calculated.
-Typically, however, input file names will be given in the call, as in the example below. 
-
-```
-./stm sim2 pars.txt user_pars.txt
-```
-
-With only the two parameter files (as in both examples above), weather and slurry level variables are calculated from the settings in the user parameter file.
-To use measured weather instead, add a weather file to the call:
-
-```
-./stm sim3 pars.txt user_pars.txt weather.csv
-```
-
-The weather file should contain these three columns, in this order: day of year (1-365), air temperature (degrees C), and average global solar radiation (W/m2).
-The file is assumed to have a header row (ignored by STM) and can be whitespace- or comma-delimited.
-
-Slurry level can be specified in an additional file, containing two columns: day of year and slurry level (depth, m).
-The only required day of year is 1 (January 1), and the level is assumed to be the same on the last day of the year also.
-The model will use linear interpolation to fill in other days.
-Any increase is taken as slurry addition, and decrease removal.
-
-```
-./stm sim4 pars.txt user_pars.txt weather.csv slurry_level.csv
-```
-
-As with the weather file, slurry level can be in a whitespace- or comma-delimited file.
-
-# Inputs
-Example input files can be found in the `inputs` directory.
-Inputs in the two "parameter" files have a fixed structure by row, so don't delete or add rows.
-The main parameter file, `pars.txt` in the examples above, has parameters directly related to heat transfer and storage, including heat capacity and heat transfer coefficients. 
-Ideally these values would not be regularly changed, but determination of some is challenging.
-See the [STM-applications repo]((https://github.com/sashahafner/STM-applications) for default values and information on how they were determined.
-  
-# Outputs
-Comma-separated output files are created for temperature, weather, and heat transfer rates. 
-See the `tests` directory for examples.
-
-# Bugs and more
-If you find a problem in STM or this repo please create an [issue](https://github.com/sashahafner/STM-applications/issues).
-If you are familiar with Fortran, please feel free to make some edits and create a pull request!
 
