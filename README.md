@@ -11,8 +11,28 @@ In general, "installation" is as simple as downloading the binary file (stm.exe 
 To run [example 01](https://github.com/sashahafner/STM-applications/tree/master/examples/01) from [STM-applications repo](https://github.com/sashahafner/STM-applications) for example, put stm.exe in the "01" subdirectory and follow the instructions in the [README file](https://github.com/sashahafner/STM-applications/blob/master/examples/01/README.md).
 By setting the PATH variable, it is possible to run STM from any directory, although this is not necessary.
 
-On Windows, users will likely need to install some libraries to run STM; download and run the [`bin/Windows/w_ifort_runtime. . .exe`](https://github.com/sashahafner/STM/tree/master/bin/Windows) exe file.
+The simplest way for non-GitHub users to do download these files is to click on the green "Code" button toward the top right of the repo main page and then "Download ZIP".
+Extract the downloaded file, and then browse to the appropriate subdirectory within `bin` to find the binary file.
+
+On Windows, users will likely need to install some libraries to run STM; download and run the [`bin/Windows/w_ifort_runtime. . .exe`](https://github.com/sashahafner/STM/tree/master/bin/Windows) exe file to install them.
+And a computer restart is then necessary.
 Or, see [here](https://www.intel.com/content/www/us/en/developer/articles/tool/compilers-redistributable-libraries-by-version.html) for the latest versions.
+
+Linux is simpler, but users will need to set file permissions to executable.
+Alternatively, users can compile the program themselves (see "Compliation" section below).
+
+To summarize, follow these steps to install STM:
+
+## Windows
+1. Download the contents of the STM repo using the green "Code" button and then "Download ZIP"
+2. Extract the contents 
+3. Find `stm.exe` in `bin` and move it to the appropriate location (e.g., `examples/01` from the [STM-applications repo](https://github.com/sashahafner/STM-applications))
+4. Browse to `bin/Windows/w_ifort_runtime. . .exe` and double-click then accept the default settings to install necessary libraries
+5. Restart your computer
+
+## Linux
+1. Download [`bin/Linux/stm`](https://github.com/sashahafner/STM/raw/master/bin/Linux/stm) and move it to the appropriate location
+2. Set file permissions to executable (e.g., `sudo chmod +x stm`)
 
 # Compilation
 The model code is in `src/stm.f90`.
@@ -21,6 +41,9 @@ On Linux with the GNU Fortran 95 compiler, it can be compiled with the following
 ```
 gfortran stm.f90 -o stm
 ```
+
+Information on the free GNU compiler is available online.
+It can be installed with `sudo apt install gfortran`.
 
 # Running STM
 For several detailed examples and some explanation, see the [STM-applications repo](https://github.com/sashahafner/STM-applications).
