@@ -24,7 +24,7 @@ PROGRAM stm
   INTEGER :: fileStat    ! End of file indicator
 
   ! Simulation ID
-  CHARACTER (LEN=4) :: ID ! ID code of simulation
+  CHARACTER (LEN=10) :: ID ! ID code of simulation
   !!CHARACTER (LEN=1) :: ventType ! Type of ventilation
 
   ! File names
@@ -154,7 +154,6 @@ PROGRAM stm
     fixedFill = .TRUE.
   END IF
 
-
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Open files
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -172,12 +171,12 @@ PROGRAM stm
   ! Output and log files
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Output files, name based on ID
-  OPEN (UNIT=10,FILE=(''//ID//'_temp.csv'), STATUS='UNKNOWN')
-  OPEN (UNIT=11,FILE=(''//ID//'_rates.csv'), STATUS='UNKNOWN')
-  OPEN (UNIT=12,FILE=(''//ID//'_weather.csv'), STATUS='UNKNOWN')
+  OPEN (UNIT=10,FILE=(''//TRIM(ID)//'_temp.csv'), STATUS='UNKNOWN')
+  OPEN (UNIT=11,FILE=(''//TRIM(ID)//'_rates.csv'), STATUS='UNKNOWN')
+  OPEN (UNIT=12,FILE=(''//TRIM(ID)//'_weather.csv'), STATUS='UNKNOWN')
 
   ! Log file, name based on ID
-  OPEN (UNIT=20,FILE=(''//ID//'_log.txt'), STATUS='UNKNOWN')
+  OPEN (UNIT=20,FILE=(''//TRIM(ID)//'_log.txt'), STATUS='UNKNOWN')
 
   ! Start timer
   CALL SYSTEM_CLOCK(ttbeginning, ttrate)
@@ -187,13 +186,13 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.4, 15 July 2022'
+  WRITE(20,'(A)') 'STM version 0.5, 27 September 2022'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   IF (numArgs .EQ. 0) THEN
     WRITE(20,'(A)') 'No file names specified, so using defaults.'
   END IF
-  WRITE(20,'(2A)') 'Simulation ID: ', ID
+  WRITE(20,'(2A)') 'Simulation ID: ', TRIM(ID)
   WRITE(20,'(2A)') 'User par file: ', userParFile
   WRITE(20,'(2A)') 'Par file: ', parFile
   IF (calcWeather) THEN
