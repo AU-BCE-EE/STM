@@ -187,7 +187,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.6, 16 November 2022'
+  WRITE(20,'(A)') 'STM version 0.7, 16 November 2022'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   IF (numArgs .EQ. 0) THEN
@@ -226,10 +226,12 @@ PROGRAM stm
   READ(1,*) tempInitial
   READ(1,*) tempInSetting
   READ(1,*) tempInChar
-  READ(1,*) slurryProd
-  READ(1,*) residMass
-  READ(1,*) emptyDOY1
-  READ(1,*) emptyDOY2 
+  IF (fixedFill) THEN
+    READ(1,*) slurryProd
+    READ(1,*) residMass
+    READ(1,*) emptyDOY1
+    READ(1,*) emptyDOY2 
+  END IF
 
   IF (calcWeather) THEN
     READ(1,*)
