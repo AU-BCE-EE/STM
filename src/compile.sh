@@ -5,3 +5,4 @@ gfortran stm.f90 -o stm
 mv stm ../bin/Linux/stm
 
 echo 'Compiled stm (or tried to). Did you update version number in stm.f90?'
+grep -i -n 'STM version' stm.f90 
