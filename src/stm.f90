@@ -43,6 +43,7 @@ PROGRAM stm
   REAL :: tempSS         ! Steady-state slurry temperature used to deal with numerical instability
   REAL :: sumTempSlurry  ! Sum of hourly slurry temperatures for calculating daily mean
   REAL :: tempIn         ! Temperature of slurry when added to store/pit/tank/lagoon
+  CHARACTER :: tempInChar! Temperature of slurry when added to store/pit/tank/lagoon as character for flexible reading in
   REAL :: trigPartTemp   ! Sine part of temperature expression
   REAL :: residMass      ! Mass of slurry left behind when emptying
 
@@ -186,7 +187,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.5, 27 September 2022'
+  WRITE(20,'(A)') 'STM version 0.6, 16 November 2022'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   IF (numArgs .EQ. 0) THEN
@@ -224,7 +225,7 @@ PROGRAM stm
   READ(1,*) slurryVol
   READ(1,*) tempInitial
   READ(1,*) tempInSetting
-  READ(1,*) tempIn
+  READ(1,*) tempInChar
   READ(1,*) slurryProd
   READ(1,*) residMass
   READ(1,*) emptyDOY1
@@ -280,10 +281,12 @@ PROGRAM stm
   ! Sort out tempreature of added slurry
   IF (tempInsetting .EQ. 'Co') THEN
     constantTempIn = .TRUE.
-  ELSE IF (tempInSetting .EQ. 'No') THEN
+    READ(tempInChar, *) tempIn
+  ELSE IF (tempInSetting .EQ. 'No' .OR. tempInsetting .EQ. 'Sa') THEN
     constantTempIn = .FALSE.
+    tempIn = -99
   ELSE
-    WRITE(20,*) "Error: Added slurry temperature description not recognized. Must be Constant or None. Stopping."
+    WRITE(20,*) "Error: Added slurry temperature description not recognized. Must be Constant or None (or Same). Stopping."
     STOP
   END IF
 
