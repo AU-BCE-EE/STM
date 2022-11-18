@@ -77,7 +77,7 @@ PROGRAM stm
   REAL :: levelPrev
 
   ! Heat transfer coefficients and related variables
-  REAL :: Rair, Rconc, Rslur, Rsoil ! Entered resistance terms K-m2/W
+  REAL :: Rair, Rconc, Rslur, Rslurvar, Rsoil ! Entered resistance terms K-m2/W
   REAL :: Ruwall, Rdwall, Rfloor, Rtop ! Calculated resistance K-m2/W 
   REAL :: cpSlurry       ! Heat capacity of slurry J/kg-K
   REAL :: cpLiquid, cpFrozen  ! Heat capacity of liquid or frozen slurry J/kg-K
@@ -187,7 +187,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.7, 16 November 2022'
+  WRITE(20,'(A)') 'STM version 0.8, 18 November 2022'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   IF (numArgs .EQ. 0) THEN
@@ -304,11 +304,6 @@ PROGRAM stm
   massSlurry = slurryVol * dSlurry / 1000 ! Slurry mass is in metric tonnes = Mg = 1000 kg
   massSlurryInit = massSlurry
 
-  ! Heat transfer resistance terms R' (K-m2/W)
-  Rfloor = Rslur + Rconc + Rsoil
-  Rdwall = Rslur + Rconc + Rsoil 
-  Ruwall = Rslur + Rconc + Rair
-  Rtop = Rslur + Rair 
 
   ! Determine tempAir, solRad, and soil temperatures for each day within a complete year
   ! Start day loop
@@ -530,7 +525,16 @@ PROGRAM stm
         WRITE(20,*) 'Warning: day of year ', DOY, ', hour', hr, ', Slurry depth is greater than maximum depth! Check inputs.'
         WRITE(20,*)
       END IF
-    
+
+      ! Calculate variable resistance terms
+      ! Heat transfer resistance terms R' (K-m2/W)
+      Rslurvar = Rslur * SQRT(slurryDepth)
+
+      Rfloor = Rslurvar + Rconc + Rsoil
+      Rdwall = Rslur + Rconc + Rsoil 
+      Ruwall = Rslur + Rconc + Rair
+      Rtop = Rslurvar + Rair 
+ 
       ! Calculate heat transfer rates, all in watts (J/s)
       ! Qfeed is hypothetical rate pretending to make up difference relative to new mass at tempSlurry
       ! Assume feed is always liquid
