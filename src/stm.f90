@@ -148,11 +148,17 @@ PROGRAM stm
     calcWeather = .FALSE.
     fixedFill = .FALSE.
   ELSE
-    parFile = 'pars.txt'
-    userParFile = 'user_pars.txt'
-    ID = '0001'
-    calcWeather = .TRUE.
-    fixedFill = .TRUE.
+    WRITE(*,*) 'stm help'
+    WRITE(*,*) 'Usage: stm[.exe] ID parfile userparfile [weatherfile] [levelfile]'
+    WRITE(*,*) 'Use stm.exe on Windows.'
+    WRITE(*,*) 'Weather file and level file are optional.'
+    WRITE(*,*) 'See https://github.com/sashahafner/STM-applications for examples.'
+    STOP
+    !parFile = 'pars.txt'
+    !userParFile = 'user_pars.txt'
+    !ID = '0001'
+    !calcWeather = .TRUE.
+    !fixedFill = .TRUE.
   END IF
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -187,7 +193,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.7, 16 November 2022'
+  WRITE(20,'(A)') 'STM version 0.8, 20 November 2022'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   IF (numArgs .EQ. 0) THEN
