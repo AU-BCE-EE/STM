@@ -35,6 +35,7 @@ PROGRAM stm
 
   ! Temperatures, all in degrees C
   REAL, DIMENSION(366) :: tempAir, tempFloor, tempWall ! Air, floor (bottom of store or pit), and wall (side of store or pit)
+  REAL :: tempAirSum, tempAirAve ! Average air temperature
   REAL :: dTemp          ! Change in temperature during time step (deg. C) 
   REAL :: maxAnnTemp     ! Maximum daily average air temperature over the year
   REAL :: minAnnTemp     ! Minimum daily average air temperature over the year
@@ -193,7 +194,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.8, 20 November 2022'
+  WRITE(20,'(A)') 'STM version 0.9, 28 November 2022'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   IF (numArgs .EQ. 0) THEN
@@ -329,17 +330,25 @@ PROGRAM stm
         solRad(DOY) = 0
       END IF
     END DO
+    tempAirAve = (minAnnTemp + maxAnnTemp) / 2.
   ELSE ! Read weather data from file
     ! Skip header
     READ(3,*)
+    tempAirSum = 0.
     DO WHILE (.NOT. IS_IOSTAT_END(fileStat))
       READ(3,*,IOSTAT=fileStat) DOY, tempAir(DOY), solRad(DOY)
+      IF (DOY > 365) THEN
+        WRITE(20,*) "Warning: Day of year > 365 found in weather file, and will be ignored."
+      ELSE 
+        tempAirSum = tempAirSum + tempAir(DOY)
+      END IF
     END DO
+    tempAirAve = tempAirSum / 365.
   END IF
 
   ! Soil temperature based on moving average
-  wallAvePeriod = MAX(wallDepth/soilDamp*365, 1.)
-  floorAvePeriod = MAX(buriedDepth/soilDamp*365, 1.)
+  wallAvePeriod = MAX(wallDepth/soilDamp, 1.)*365
+  floorAvePeriod = MAX(buriedDepth/soilDamp, 1.)*365
 
   ! Avoid very short averaging periods that are not plausible (because floor is actually covered with tank, so 1 d impossible)
   IF (floorAvePeriod .LT. 5.) THEN
@@ -353,7 +362,7 @@ PROGRAM stm
   ! Calculate moving average for first day of year
   ! Wall first
   IF (wallAvePeriod > 365) THEN
-    tempWall(:) = (minAnnTemp + maxAnnTemp)/2.
+    tempWall(:) = tempAirAve
   ELSE IF (wallAvePeriod > 1) THEN
     ! First need to calculate value for DOY = 1
     tempWall(1) = tempAir(1) / wallAvePeriod
@@ -385,7 +394,7 @@ PROGRAM stm
 
   ! Then floor
   IF (floorAvePeriod > 365) THEN
-    tempFloor(:) = (minAnnTemp + maxAnnTemp)/2.
+    tempFloor(:) = tempAirAve
   ELSE 
     ! First need to calculate value for DOY = 1
     tempFloor(1) = tempAir(1) / floorAvePeriod
