@@ -194,12 +194,9 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.11, 29 November 2022'
+  WRITE(20,'(A)') 'STM version 0.12, 29 November 2022'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
-  IF (numArgs .EQ. 0) THEN
-    WRITE(20,'(A)') 'No file names specified, so using defaults.'
-  END IF
   WRITE(20,'(2A)') 'Simulation ID: ', TRIM(ID)
   WRITE(20,'(2A)') 'User par file: ', userParFile
   WRITE(20,'(2A)') 'Par file: ', parFile
