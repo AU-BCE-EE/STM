@@ -194,7 +194,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.9, 28 November 2022'
+  WRITE(20,'(A)') 'STM version 0.11, 29 November 2022'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   IF (numArgs .EQ. 0) THEN
@@ -335,13 +335,14 @@ PROGRAM stm
     ! Skip header
     READ(3,*)
     tempAirSum = 0.
+    READ(3,*,IOSTAT=fileStat) DOY, tempAir(DOY), solRad(DOY)
     DO WHILE (.NOT. IS_IOSTAT_END(fileStat))
-      READ(3,*,IOSTAT=fileStat) DOY, tempAir(DOY), solRad(DOY)
       IF (DOY > 365) THEN
         WRITE(20,*) "Warning: Day of year > 365 found in weather file, and will be ignored."
       ELSE 
         tempAirSum = tempAirSum + tempAir(DOY)
       END IF
+      READ(3,*,IOSTAT=fileStat) DOY, tempAir(DOY), solRad(DOY)
     END DO
     tempAirAve = tempAirSum / 365.
   END IF
@@ -430,11 +431,12 @@ PROGRAM stm
     END IF
     DOYprev = 1
     level(365) = level(1)
+    READ(4,*,IOSTAT=fileStat) DOY, level(DOY)
     DO WHILE (.NOT. IS_IOSTAT_END(fileStat))
-      READ(4,*,IOSTAT=fileStat) DOY, level(DOY)
       rLevelAve(DOYprev) = (level(DOY) - levelPrev) / (DOY - DOYprev)
       DOYprev = DOY
       levelPrev = level(DOY)
+      READ(4,*,IOSTAT=fileStat) DOY, level(DOY)
     END DO
     rLevelAve(DOY) = (level(365) - levelPrev) / (365 - DOYprev)
 
