@@ -194,7 +194,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.12, 29 November 2022'
+  WRITE(20,'(A)') 'STM version 0.14, 2 December 2022'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   WRITE(20,'(2A)') 'Simulation ID: ', TRIM(ID)
@@ -345,8 +345,8 @@ PROGRAM stm
   END IF
 
   ! Soil temperature based on moving average
-  wallAvePeriod = MAX(wallDepth/soilDamp, 1.)*365
-  floorAvePeriod = MAX(buriedDepth/soilDamp, 1.)*365
+  wallAvePeriod = MIN(wallDepth/soilDamp, 1.)*365
+  floorAvePeriod = MIN(buriedDepth/soilDamp, 1.)*365
 
   ! Avoid very short averaging periods that are not plausible (because floor is actually covered with tank, so 1 d impossible)
   IF (floorAvePeriod .LT. 5.) THEN
