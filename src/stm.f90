@@ -44,7 +44,7 @@ PROGRAM stm
   REAL :: tempSS         ! Steady-state slurry temperature used to deal with numerical instability
   REAL :: sumTempSlurry  ! Sum of hourly slurry temperatures for calculating daily mean
   REAL :: tempIn         ! Temperature of slurry when added to store/pit/tank/lagoon
-  CHARACTER :: tempInChar! Temperature of slurry when added to store/pit/tank/lagoon as character for flexible reading in
+  CHARACTER (LEN=5) :: tempInChar! Temperature of slurry when added to store/pit/tank/lagoon as character for flexible reading in
   REAL :: trigPartTemp   ! Sine part of temperature expression
   REAL :: residMass      ! Mass of slurry left behind when emptying
 
@@ -74,7 +74,7 @@ PROGRAM stm
   REAL :: slurryProd     ! Slurry production rate (= inflow = outflow) (Mg/d)
 
   ! Level variables
-  REAL, DIMENSION(366) :: level, rLevelAve
+  REAL, DIMENSION(365) :: level, rLevelAve
   REAL :: levelPrev
 
   ! Heat transfer coefficients and related variables
@@ -194,7 +194,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.14, 2 December 2022'
+  WRITE(20,'(A)') 'STM version 0.15, 5 December 2022'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   WRITE(20,'(2A)') 'Simulation ID: ', TRIM(ID)
@@ -359,7 +359,7 @@ PROGRAM stm
 
   ! Calculate moving average for first day of year
   ! Wall first
-  IF (wallAvePeriod > 365) THEN
+  IF (wallAvePeriod .GE. 365) THEN
     tempWall(:) = tempAirAve
   ELSE IF (wallAvePeriod > 1) THEN
     ! First need to calculate value for DOY = 1
@@ -381,6 +381,7 @@ PROGRAM stm
         tempWall(DOY) = tempWall(DOY) / soilFreezeDiv
       END IF
     END DO
+
   ELSE
     tempWall(:) = tempAir(:)
     DO DOY = 1,365,1
@@ -391,7 +392,7 @@ PROGRAM stm
   END IF
 
   ! Then floor
-  IF (floorAvePeriod > 365) THEN
+  IF (floorAvePeriod .GE. 365) THEN
     tempFloor(:) = tempAirAve
   ELSE 
     ! First need to calculate value for DOY = 1
@@ -435,7 +436,11 @@ PROGRAM stm
       levelPrev = level(DOY)
       READ(4,*,IOSTAT=fileStat) DOY, level(DOY)
     END DO
-    rLevelAve(DOY) = (level(365) - levelPrev) / (365 - DOYprev)
+    IF (DOY .NE. 365) THEN
+      rLevelAve(DOYPrev) = (level(365) - levelPrev) / (365 - DOYprev)
+    ELSE
+      rlevelAve(DOYPrev) = 0
+    END IF
 
     ! Fill in missing levels, linear interpolation
     DO DOY = 2,365,1
