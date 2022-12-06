@@ -1,4 +1,4 @@
-Parameter values for STM heat transfer model
+Parameter values for STM heat transfer model - version 0.7
 Slurry physical constants
               Liquid         Frozen
   Density  specific heat  specific heat  Heat of fusion 
@@ -6,8 +6,8 @@ Slurry physical constants
    1000        4200           2100          333550
 Heat transfer resistance terms (K-m2/W)
   Air    Concrete   Slurry   Soil
-  0.0178   1.49     0.659    0.191 
+  0.02     0.3      0.646    2.38 
 Other parameters
  Absorptivity  Soil damping depth   Heat generation
     (-)              (m)              (W/m3)
-  0.0222              2                 0
+  0.0108              1.03                 0

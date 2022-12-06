@@ -1,6 +1,6 @@
 # STM
 Simple heat transfer model for predicting the temperature of animal slurry (animal manure with < about 15% dry matter) or similar materials during storage in outdoor tanks.
-The STM repository has Fortran 90 source code (in `src`), compiled binary files for Linux and Windows (in `bin`), example input files and default parameter file (in `inputs`), and finally, a few tests ( in `tests`).
+The STM repository has Fortran 90 source code (in `src`), compiled binary files for Linux and Windows (in `bin`), and example input files and default parameter file (in `inputs`).
 This README file describes the model and gives a short introduction to the software program.
 For detailed examples and more information on the software program, see the [STM-applications repo](https://github.com/sashahafner/STM-applications).
 
