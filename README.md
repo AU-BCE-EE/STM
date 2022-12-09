@@ -52,12 +52,12 @@ A general introduction to the STM program is given here.
 If compiled to `stm` on Linux, STM can be run with this command:
 
 ```
-./stm <IDxx> <par_file_name> <user_par_file_name> <weather_file_name> <slurry_level_file_name>
+./stm <ID> <par_file_name> <user_par_file_name> <weather_file_name> <slurry_level_file_name>
 ```
 
 On Windows, replace `./stm` with `stm.exe`.
 
-`<IDxx>` is a 4 character run ID or key code.
+`<ID>` is a run ID or key code (1-10 characters).
 Providing file names are optional, although the order is fixed.
 For example, an actual call might look like this:
 
@@ -84,7 +84,7 @@ The file is assumed to have a header row (ignored by STM) and can be whitespace-
 
 Slurry level can be specified in an additional file, containing two columns: day of year and slurry level (depth, m).
 The only required day of year is 1 (January 1), and the level is assumed to be the same on the last day of the year also.
-The model will use linear interpolation to fill in other days.
+The program will use linear interpolation to fill in other days.
 Any increase is taken as slurry addition, and decrease removal.
 
 ```
