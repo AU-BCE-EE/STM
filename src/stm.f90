@@ -194,7 +194,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.15, 5 December 2022'
+  WRITE(20,'(A)') 'STM version 0.16, 6 December 2022'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   WRITE(20,'(2A)') 'Simulation ID: ', TRIM(ID)
@@ -226,7 +226,12 @@ PROGRAM stm
   READ(1,*) width
   READ(1,*) areaAir
   READ(1,*) areaSol
-  READ(1,*) slurryVol
+  IF (fixedFill) THEN
+    READ(1,*) slurryVol
+  ELSE
+    READ(1,*)
+    slurryVol = 0
+  END IF
   READ(1,*) tempInitial
   READ(1,*) tempInSetting
   READ(1,*) tempInChar
