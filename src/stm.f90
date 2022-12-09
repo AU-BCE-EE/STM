@@ -230,7 +230,7 @@ PROGRAM stm
     READ(1,*) slurryVol
   ELSE
     READ(1,*)
-    slurryVol = 0
+    slurryVol = 0.0
   END IF
   READ(1,*) tempInitial
   READ(1,*) tempInSetting
