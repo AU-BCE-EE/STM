@@ -42,11 +42,18 @@ PROGRAM stm
   REAL :: tempInitial    ! Initial slurry temperature
   REAL :: tempSlurry     ! Hourly slurry temperature 
   REAL :: tempSS         ! Steady-state slurry temperature used to deal with numerical instability
-  REAL :: sumTempSlurry  ! Sum of hourly slurry temperatures for calculating daily mean
   REAL :: tempIn         ! Temperature of slurry when added to store/pit/tank/lagoon
   CHARACTER (LEN=5) :: tempInChar! Temperature of slurry when added to store/pit/tank/lagoon as character for flexible reading in
   REAL :: trigPartTemp   ! Sine part of temperature expression
   REAL :: residMass      ! Mass of slurry left behind when emptying
+
+  ! Sums and averages
+  REAL :: sumTempSlurry  ! Sum of hourly slurry temperatures for calculating daily mean
+  REAL :: sumMassSlurry  ! Sum of 
+  REAL :: sumSlurryProd  ! Sum of 
+  REAL :: aveMassSlurry  ! Average
+  REAL :: aveSlurryProd  ! Average
+  REAL :: retentionTime
 
   ! Geometry of storage structure
   REAL :: slurryDepth    ! Depth of slurry in store/pit (m)
@@ -107,8 +114,9 @@ PROGRAM stm
   LOGICAL :: fixedFill       ! .TRUE. when slurry is added at a fixed rate, specified in user par file
   LOGICAL :: useSS           ! .TRUE. when steady-state temperature was used at some point within a day
   LOGICAL :: constantTempIn  ! .TRUE. when temperature of added slurry is constant and added slurry brings heat energy in
+  LOGICAL :: airTempIn       ! .TRUE. when temperature of added slurry is set to air temperature
 
-  CHARACTER (LEN = 2) tempInSetting
+  CHARACTER (LEN = 3) tempInSetting
 
   ! Other parameters
   REAL, PARAMETER :: PI = 3.1415927
@@ -182,6 +190,7 @@ PROGRAM stm
   OPEN (UNIT=10,FILE=(''//TRIM(ID)//'_temp.csv'), STATUS='UNKNOWN')
   OPEN (UNIT=11,FILE=(''//TRIM(ID)//'_rates.csv'), STATUS='UNKNOWN')
   OPEN (UNIT=12,FILE=(''//TRIM(ID)//'_weather.csv'), STATUS='UNKNOWN')
+  OPEN (UNIT=13,FILE=(''//TRIM(ID)//'_summary.txt'), STATUS='UNKNOWN')
 
   ! Log file, name based on ID
   OPEN (UNIT=20,FILE=(''//TRIM(ID)//'_log.txt'), STATUS='UNKNOWN')
@@ -194,7 +203,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.16, 6 December 2022'
+  WRITE(20,'(A)') 'STM version 0.19, 16 January 2023'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   WRITE(20,'(2A)') 'Simulation ID: ', TRIM(ID)
@@ -269,9 +278,9 @@ PROGRAM stm
   READ(2,*) absorp, soilDamp, heatGen
 
   ! Output file header
-  WRITE(10,"(A)") 'Day of sim.,Day of year,Year,Slurry mass,Frozen mass,Slurry depth,Air T,Wall T,Floor T,Slurry T'
-  WRITE(10,"(A)") ',,,(Mg = 1000 kg),(Mg = 1000 kg),(m),(deg. C),(deg. C),(deg. C),(deg. C)'
-  WRITE(10,"(A)") 'day,doy,year,slurry_mass,frozen_mass,slurry_depth,air_temp,wall_temp,floor_temp,slurry_temp'
+  WRITE(10,"(A)") 'Day of sim.,Day of year,Year,Slurry mass,Frozen mass,Slurry depth,Air T,Wall T,Floor T,In T,Slurry T'
+  WRITE(10,"(A)") ',,,(Mg = 1000 kg),(Mg = 1000 kg),(m),(deg. C),(deg. C),(deg. C),(deg. C),(deg. C)'
+  WRITE(10,"(A)") 'day,doy,year,slurry_mass,frozen_mass,slurry_depth,air_temp,wall_temp,floor_temp,in_temp,slurry_temp'
  
 
   WRITE(11,"(A)") 'Day of sim.,Day of year,Year,Radiation,Generation,Air,Floor,Lower wall,Upper wall,Feed,Total,Total step,&
@@ -290,11 +299,16 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Sort out tempreature of added slurry
-  IF (tempInsetting .EQ. 'Co') THEN
+  IF (tempInsetting .EQ. 'Con' .OR. tempInSetting .EQ. 'con') THEN
     constantTempIn = .TRUE.
     READ(tempInChar, *) tempIn
-  ELSE IF (tempInSetting .EQ. 'No' .OR. tempInsetting .EQ. 'Sa') THEN
+  ELSE IF (tempInSetting .EQ. 'Non' .OR. tempInSetting .EQ. 'non' .OR. tempInsetting .EQ. 'Sam' .OR. tempInSetting .EQ. 'sam') THEN
     constantTempIn = .FALSE.
+    airTempIn = .FALSE.
+    tempIn = -99
+  ELSE IF (tempInsetting .EQ. 'Air' .OR. tempInSetting .EQ. 'air') THEN
+    constantTempIn = .FALSE.
+    airTempIn = .TRUE.
     tempIn = -99
   ELSE
     WRITE(20,*) "Error: Added slurry temperature description not recognized. Must be Constant or None (or Same). Stopping."
@@ -530,6 +544,16 @@ PROGRAM stm
     ! Set use steady state indicator to false at start of each day
     useSS = .FALSE.
 
+    ! Assume feed is always liquid
+    IF (.NOT. constantTempIn) THEN
+      IF (airTempIn) THEN
+        tempIn = tempAir(DOY)
+      ELSE 
+        ! Overwrite feed temperature if there is no heat transfer in feed
+        tempIn = tempSlurry
+      END IF
+    END IF
+
     ! Hour loop
     DO HR = 1,24,1
 
@@ -557,11 +581,6 @@ PROGRAM stm
     
       ! Calculate heat transfer rates, all in watts (J/s)
       ! Qfeed is hypothetical rate pretending to make up difference relative to new mass at tempSlurry
-      ! Assume feed is always liquid
-      IF (.NOT. constantTempIn) THEN
-        ! Overwrite feed temperature if there is no heat transfer in feed
-        tempIn = tempSlurry
-      END IF
       ! J/s               K           kg/t      t/d     / s/d    *  J/kg-K   
       Qfeed = (tempSlurry - tempIn) * 1000 * slurryProd / 86400. * cpLiquid
       ! J/s   J/s-m2-K     K               K          m2
@@ -634,8 +653,11 @@ PROGRAM stm
 
     END DO
 
-    WRITE(10,"(I4,',',I3,',',I4,7(',',F8.2))") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
-        & tempWall(DOY), tempFloor(DOY), sumTempSlurry/24.
+    sumMassSlurry = sumMassSlurry + massSlurry
+    sumSlurryProd = sumSlurryProd + slurryProd
+
+    WRITE(10,"(I4,',',I3,',',I4,8(',',F8.2))") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
+        & tempWall(DOY), tempFloor(DOY), tempIn, sumTempSlurry/24.
 
     WRITE(11,"(I4,',',I3,',',I4,6(',',F11.3),4(',',F15.0),',',1F5.2,',',L5)") DOS, DOY, YR, Qrad, Qgen, Qslur2air, &
         & Qslur2floor, Qslur2dwall, Qslur2uwall, Qfeed, sumQout/24., sumHH/24., sumHHadj/24., tempSS, useSS
@@ -643,6 +665,14 @@ PROGRAM stm
     WRITE(12,"(I4,',',I3,',',I4,2(',',F15.2))") DOS, DOY, YR, tempAir(DOY), solRad(DOY)
     
   END DO
+
+  aveMassSlurry = sumMassSlurry / DBLE(nDays)
+  aveSlurryProd = sumSlurryProd /  DBLE(nDays)
+  retentionTime = aveMassSlurry / aveSlurryProd
+
+  WRITE(13, *) 'Average slurry mass (t): ', aveMassSlurry
+  WRITE(13, *) 'Average addition rate (t/d): ', aveSlurryProd
+  WRITE(13, *) 'Average retention time (d): ', retentionTime
 
   WRITE(20,'(A)') 'Done!'
 
