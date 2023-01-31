@@ -203,7 +203,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.19, 16 January 2023'
+  WRITE(20,'(A)') 'STM version 0.20, 31 January 2023'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   WRITE(20,'(2A)') 'Simulation ID: ', TRIM(ID)
@@ -450,9 +450,11 @@ PROGRAM stm
     level(365) = level(1)
     READ(4,*,IOSTAT=fileStat) DOY, level(DOY)
     DO WHILE (.NOT. IS_IOSTAT_END(fileStat))
-      rLevelAve(DOYprev) = (level(DOY) - levelPrev) / (DOY - DOYprev)
-      DOYprev = DOY
-      levelPrev = level(DOY)
+      IF (DOY .NE. DOYprev) THEN
+        rLevelAve(DOYprev) = (level(DOY) - levelPrev) / (DOY - DOYprev)
+        DOYprev = DOY
+        levelPrev = level(DOY)
+      END IF
       READ(4,*,IOSTAT=fileStat) DOY, level(DOY)
     END DO
     IF (DOY .NE. 365) THEN
