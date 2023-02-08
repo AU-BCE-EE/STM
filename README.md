@@ -4,6 +4,12 @@ The STM repository has Fortran 90 source code (in `src`), compiled binary files 
 This README file describes the model and gives a short introduction to the software program.
 For detailed examples and more information on the software program, see the [STM-applications repo](https://github.com/sashahafner/STM-applications).
 
+# Maintainer and contributors
+Sasha D. Hafner developed and maintains this repo.
+Find contact information for questions etc. here: <https://au.dk/sasha.hafner@bce>.
+Or, open an [issue](https://github.com/AU-BCE-EE/STM/issues).
+Data kindly shared by Kristina Mjöfors, Søren O. Petersen, Anna Holm Støckler, and Chih-Yu Hung were used for testing and development.
+
 # Installation
 Binary files are provided for Linux and Windows (32 and 64 bit) in the `bin` directory.
 (Compilation on other operating systems is of course possible--see the "Compilation" section below).
