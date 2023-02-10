@@ -86,7 +86,7 @@ PROGRAM stm
 
   ! Heat transfer coefficients and related variables
   REAL :: Rair, Rwall, Rfloor, Rslur, Rsoil ! User-entered resistance terms K-m2/W
-  REAL :: Ruwall, Rdwall, Rtotfloor, Rtop ! Calculated resistance K-m2/W 
+  REAL :: Ruwall, Rdwall, Rbottom, Rtop ! Calculated resistance K-m2/W 
   REAL :: cpSlurry            ! Heat capacity of slurry J/kg-K
   REAL :: cpLiquid, cpFrozen  ! Heat capacity of liquid or frozen slurry J/kg-K
   REAL :: hfSlurry       ! Latent heat of fusion of slurry J/kg
@@ -203,7 +203,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.21, 3 February 2023'
+  WRITE(20,'(A)') 'STM version 0.22, 10 February 2023'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   WRITE(20,'(2A)') 'Simulation ID: ', TRIM(ID)
@@ -328,7 +328,7 @@ PROGRAM stm
   massSlurryInit = massSlurry
 
   ! Heat transfer resistance terms R' (K-m2/W)
-  Rtotfloor = Rslur + Rfloor + Rsoil
+  Rbottom = Rslur + Rfloor + Rsoil
   Rdwall = Rslur + Rwall + Rsoil 
   Ruwall = Rslur + Rwall + Rair
   Rtop = Rslur + Rair 
@@ -587,7 +587,7 @@ PROGRAM stm
       Qfeed = (tempSlurry - tempIn) * 1000 * slurryProd / 86400. * cpLiquid
       ! J/s   J/s-m2-K     K               K          m2
       Qslur2air = (tempSlurry - tempAir(DOY)) / Rtop * areaAir
-      Qslur2floor = (tempSlurry - tempFloor(DOY)) / Rtotfloor * areaFloor
+      Qslur2floor = (tempSlurry - tempFloor(DOY)) / Rbottom * areaFloor
       Qslur2dwall = (tempSlurry - tempWall(DOY)) / Rdwall * areaDwall
       Qslur2uwall = (tempSlurry - tempAir(DOY)) / Ruwall * areaUwall
       ! J/s      J/s-m3  *  t        /   kg/m3 * kg/t
@@ -635,9 +635,9 @@ PROGRAM stm
       tempSlurry = tempSlurry + dTemp
       
       ! Steady-state temperature
-      tempSS = (tempAir(DOY)/Rtop*areaAir + tempFloor(DOY)/Rtotfloor*areaFloor + tempWall(DOY)/Rdwall*areaDwall + &
+      tempSS = (tempAir(DOY)/Rtop*areaAir + tempFloor(DOY)/Rbottom*areaFloor + tempWall(DOY)/Rdwall*areaDwall + &
         & tempAir(DOY)/Ruwall*areaUwall + (1000. * slurryProd / 86400. * cpLiquid * tempIn) - Qrad - Qgen) / &
-        & (areaAir/Rtop + areaFloor/Rtotfloor + areaDwall/Rdwall + areaUwall/Ruwall + (1000. * slurryProd / 86400. * cpLiquid))
+        & (areaAir/Rtop + areaFloor/Rbottom + areaDwall/Rdwall + areaUwall/Ruwall + (1000. * slurryProd / 86400. * cpLiquid))
 
       ! Limit change in temperature to change to SS temp
       IF (dTemp > 0. .AND. tempSlurry > tempSS) THEN
