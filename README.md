@@ -1,6 +1,6 @@
 # STM
 Simple heat transfer model for predicting the temperature of animal slurry (animal manure with < about 15% dry matter) or similar materials during storage in outdoor tanks.
-The STM repository has Fortran 90 source code (in `src`), compiled binary files for Linux and Windows (in `bin`), and example input files and default parameter file (in `inputs`).
+The STM repository has Fortran 90 source code (in `src`), compiled binary files for Linux, macOS, and Windows (in `bin`), and example input files and default parameter file (in `inputs`).
 This README file describes the model and gives a short introduction to the software program.
 For detailed examples and more information on the software program, see the [STM-applications repo](https://github.com/sashahafner/STM-applications).
 
@@ -11,7 +11,7 @@ Or, open an [issue](https://github.com/AU-BCE-EE/STM/issues).
 Data kindly shared by Kristina Mjöfors, Søren O. Petersen, Anna Holm Støckler, and Chih-Yu Hung were used for testing and development.
 
 # Installation
-Binary files are provided for Linux and Windows (32 and 64 bit) in the `bin` directory.
+Binary files are provided for Linux, macOS, and Windows (32 and 64 bit) in the `bin` directory.
 (Compilation on other operating systems is of course possible--see the "Compilation" section below).
 In general, "installation" is as simple as downloading the binary file (stm.exe for Windows, stm for Linux) and moving it to the directory from which you would like to call the program.
 To run [example 01](https://github.com/sashahafner/STM-applications/tree/master/examples/01) from [STM-applications repo](https://github.com/sashahafner/STM-applications) for example, put stm.exe in the "01" subdirectory and follow the instructions in the [README file](https://github.com/sashahafner/STM-applications/blob/master/examples/01/README.md).
@@ -36,20 +36,20 @@ To summarize, follow these steps to install STM:
 4. Browse to `bin/Windows/w_ifort_runtime. . .exe` and double-click then accept the default settings to install necessary libraries
 5. Restart your computer
 
-## Linux
+## Linux and macOS
 1. Download [`bin/Linux/stm`](https://github.com/sashahafner/STM/raw/master/bin/Linux/stm) and move it to the appropriate location
 2. Set file permissions to executable (e.g., `sudo chmod +x stm`)
 
 # Compilation
 The model code is in `src/stm.f90`.
-On Linux with the GNU Fortran 95 compiler, it can be compiled with the following command to create the the binary file `stm`.
+On Linux or macOS with the GNU Fortran 95 compiler, it can be compiled with the following command to create the the binary file `stm`.
 
 ```
 gfortran stm.f90 -o stm
 ```
 
 Information on the free GNU compiler is available online.
-It can be installed with `sudo apt install gfortran`.
+It can be installed on Linux with `sudo apt install gfortran`.
 
 # Running STM
 For several detailed examples and some explanation, see the [STM-applications repo](https://github.com/sashahafner/STM-applications).
