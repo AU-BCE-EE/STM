@@ -2,7 +2,7 @@ PROGRAM stm
 
   ! Simple temperature model for stored slurry 
   ! By Sasha D. Hafner
-  ! See https://github.com/sashahafner/STM for latest version
+  ! See https://github.com/sashahafner/STM for latest version and more details
 
   IMPLICIT NONE
   
@@ -44,7 +44,7 @@ PROGRAM stm
   REAL :: tempSS         ! Steady-state slurry temperature used to deal with numerical instability
   REAL :: tempIn         ! Temperature of slurry when added to store/pit/tank/lagoon
   CHARACTER (LEN=5) :: tempInChar! Temperature of slurry when added to store/pit/tank/lagoon as character for flexible reading in
-  REAL :: trigPartTemp   ! Sine part of temperature expression
+  REAL :: trigPartTemp   ! Sine part of temperature expression (intermediate in calculation)
   REAL :: residMass      ! Mass of slurry left behind when emptying
 
   ! Sums and averages
@@ -73,7 +73,7 @@ PROGRAM stm
   REAL :: maxAnnRad      ! Maximum daily average radiation over the year
   REAL :: minAnnRad      ! Minimum daily average radiation over the year
   REAL, DIMENSION(366) :: solRad ! Average solar radiation rate (W/m2)
-  REAL :: trigPartRad    ! Sine part of radiation expression
+  REAL :: trigPartRad    ! Sine part of radiation expression (intermediate in calculation)
   
   ! Other slurry variables
   REAL :: massSlurry, massSlurryInit, massFrozen = 0   ! Slurry mass (Mg = 1000 kg = metric tonnes)
@@ -89,6 +89,7 @@ PROGRAM stm
   REAL :: Ruwall, Rdwall, Rbottom, Rtop ! Calculated resistance K-m2/W 
   REAL :: cpSlurry            ! Heat capacity of slurry J/kg-K
   REAL :: cpLiquid, cpFrozen  ! Heat capacity of liquid or frozen slurry J/kg-K
+  REAL :: tempFreeze     ! Freezing point of slurry (degrees C)
   REAL :: hfSlurry       ! Latent heat of fusion of slurry J/kg
   REAL :: dSlurry        ! Density of slurry kg/m3
   REAL :: soilDamp       ! Soil damping depth, where averaging period reaches 1 full yr, in m
@@ -203,7 +204,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.22, 10 February 2023'
+  WRITE(20,'(A)') 'STM version 0.23, 10 February 2023'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   WRITE(20,'(2A)') 'Simulation ID: ', TRIM(ID)
@@ -268,7 +269,7 @@ PROGRAM stm
   READ(2,*) 
   READ(2,*) 
   READ(2,*) 
-  READ(2,*) dSlurry, cpLiquid, cpFrozen, hfSlurry
+  READ(2,*) dSlurry, cpLiquid, cpFrozen, hfSlurry, tempFreeze
   READ(2,*) 
   READ(2,*) 
   READ(2,*) Rair, Rwall, Rfloor, Rslur, Rsoil
@@ -607,10 +608,10 @@ PROGRAM stm
       dTemp = - HHadj / (1000. * cpSlurry * massSlurry)
 
       ! Freeze and thaw
-      IF (tempSlurry + dTemp .LT. 0.0) THEN
+      IF (tempSlurry + dTemp .LT. tempFreeze) THEN
         ! Use HH to get to 0 C
-        HHadj = HHadj + (0.0 - tempSlurry) * 1000. * cpSlurry * massSlurry
-        tempSlurry = 0.0
+        HHadj = HHadj + (tempFreeze - tempSlurry) * 1000. * cpSlurry * massSlurry
+        tempSlurry = tempFreeze
 
         IF (HHadj .GT. 0.0) THEN
           ! Still some cooling available for freezing
