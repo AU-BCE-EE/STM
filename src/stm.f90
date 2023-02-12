@@ -92,7 +92,8 @@ PROGRAM stm
   REAL :: tempFreeze     ! Freezing point of slurry (degrees C)
   REAL :: hfSlurry       ! Latent heat of fusion of slurry J/kg
   REAL :: dSlurry        ! Density of slurry kg/m3
-  REAL :: soilDamp       ! Soil damping depth, where averaging period reaches 1 full yr, in m
+  REAL :: soilConstDepth ! Soil depth where averaging period reaches 1 full yr, temperature (virtually) constant, in m
+  REAL :: soilOffset     ! Offset for calculating soil temperature, use air temperature + soilOffset, in deg. C
   REAL :: heatGen        ! Slurry heat generation term W/m3 
 
   ! Heat flow total in J
@@ -204,7 +205,7 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.23, 10 February 2023'
+  WRITE(20,'(A)') 'STM version 0.24, 12 February 2023'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   WRITE(20,'(2A)') 'Simulation ID: ', TRIM(ID)
@@ -276,7 +277,7 @@ PROGRAM stm
   READ(2,*) 
   READ(2,*) 
   READ(2,*) 
-  READ(2,*) absorp, soilDamp, heatGen
+  READ(2,*) absorp, soilConstDepth, soilOffset, heatGen
 
   ! Output file header
   WRITE(10,"(A)") 'Day of sim.,Day of year,Year,Slurry mass,Frozen mass,Slurry depth,Air T,Wall T,Floor T,In T,Slurry T'
@@ -365,8 +366,8 @@ PROGRAM stm
   END IF
 
   ! Soil temperature based on moving average
-  wallAvePeriod = MIN(wallDepth/soilDamp, 1.)*365
-  floorAvePeriod = MIN(buriedDepth/soilDamp, 1.)*365
+  wallAvePeriod = MIN(wallDepth/soilConstDepth, 1.)*365
+  floorAvePeriod = MIN(buriedDepth/soilConstDepth, 1.)*365
 
   ! Avoid very short averaging periods that are not plausible (because floor is actually covered with tank, so 1 d impossible)
   IF (floorAvePeriod .LT. 5.) THEN
@@ -436,7 +437,11 @@ PROGRAM stm
     END DO
   END IF
 
-  ! Reading in level
+  ! Add soil temperature offset
+  tempFloor(:) = tempFloor(:) + soilOffset
+  tempWall(:) = tempWall(:) + soilOffset
+
+  ! Reading in slurry level
   ! Set all to NA value
   level = -99.
   IF (.NOT. fixedFill) THEN
