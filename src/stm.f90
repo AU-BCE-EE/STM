@@ -22,6 +22,7 @@ PROGRAM stm
   INTEGER :: emptyDOY2   ! 
   INTEGER :: wallAvePeriod, floorAvePeriod ! Number of days in running averages for wall and floor temperature
   INTEGER :: fileStat    ! End of file indicator
+  INTEGER :: fileRow     ! File row to check for problem
 
   ! Simulation ID
   CHARACTER (LEN=10) :: ID ! ID code of simulation
@@ -204,8 +205,9 @@ PROGRAM stm
   ! Start log file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(20,'(A)') 'Starting STM model . . . '
+  WRITE(*,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.24, 12 February 2023'
+  WRITE(20,'(A)') 'STM version 0.25, 23 February 2023'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   WRITE(20,'(2A)') 'Simulation ID: ', TRIM(ID)
@@ -354,6 +356,7 @@ PROGRAM stm
     READ(3,*)
     tempAirSum = 0.
     READ(3,*,IOSTAT=fileStat) DOY, tempAir(DOY), solRad(DOY)
+    fileRow = 1
     DO WHILE (.NOT. IS_IOSTAT_END(fileStat))
       IF (DOY > 365) THEN
         WRITE(20,*) "Warning: Day of year > 365 found in weather file, and will be ignored."
@@ -361,6 +364,12 @@ PROGRAM stm
         tempAirSum = tempAirSum + tempAir(DOY)
       END IF
       READ(3,*,IOSTAT=fileStat) DOY, tempAir(DOY), solRad(DOY)
+      fileRow = fileRow + 1
+      IF (fileRow > 367) THEN
+        WRITE(*,*) 'Error: More than 1 year of data found in weather file. Stopping.'
+        WRITE(20,*) 'Error: More than 1 year of data found in weather file. Stopping.'
+        STOP
+      END IF
     END DO
     tempAirAve = tempAirSum / 365.
   END IF
@@ -449,6 +458,7 @@ PROGRAM stm
     READ(4,*) DOY, level(1)
     levelPrev = level(1)
     IF (DOY .NE. 1.) THEN
+      WRITE(*,*) "Error: First day of year *must* be 1 in level file! Stopping."
       WRITE(20,*) "Error: First day of year *must* be 1 in level file! Stopping."
       STOP
     END IF
@@ -683,6 +693,7 @@ PROGRAM stm
   WRITE(13, *) 'Average retention time (d): ', retentionTime
 
   WRITE(20,'(A)') 'Done!'
+  WRITE(*,'(A)') 'Done!'
 
   ! Timer
   CALL SYSTEM_CLOCK(ttend)
