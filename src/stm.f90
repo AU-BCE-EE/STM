@@ -31,6 +31,9 @@ PROGRAM stm
   ! File names
   CHARACTER (LEN=30) :: userParFile, parFile, weatherFile, levelFile
 
+  ! Version string
+  CHARACTER (LEN=45) :: verString = 'Starting STM version 1.0 (9 March 2023)'
+
   ! Command line arguments, length
   INTEGER :: numArgs
 
@@ -46,7 +49,7 @@ PROGRAM stm
   REAL :: tempIn         ! Temperature of slurry when added to store/pit/tank/lagoon
   CHARACTER (LEN=5) :: tempInChar! Temperature of slurry when added to store/pit/tank/lagoon as character for flexible reading in
   REAL :: trigPartTemp   ! Sine part of temperature expression (intermediate in calculation)
-  REAL :: residMass      ! Mass of slurry left behind when emptying
+  REAL :: residVol      ! Mass of slurry left behind when emptying
 
   ! Sums and averages
   REAL :: sumTempSlurry  ! Sum of hourly slurry temperatures for calculating daily mean
@@ -166,11 +169,6 @@ PROGRAM stm
     WRITE(*,*) 'Weather file and level file are optional.'
     WRITE(*,*) 'See https://github.com/sashahafner/STM-applications for examples.'
     STOP
-    !parFile = 'pars.txt'
-    !userParFile = 'user_pars.txt'
-    !ID = '0001'
-    !calcWeather = .TRUE.
-    !fixedFill = .TRUE.
   END IF
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -204,10 +202,9 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Start log file
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  WRITE(20,'(A)') 'Starting STM model . . . '
-  WRITE(*,'(A)') 'Starting STM model . . . '
+  WRITE(*,'(A)') verString 
+  WRITE(20,'(A)') verString 
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.26, 8 March 2023'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   WRITE(20,'(2A)') 'Simulation ID: ', TRIM(ID)
@@ -250,7 +247,7 @@ PROGRAM stm
   READ(1,*) tempInChar
   IF (fixedFill) THEN
     READ(1,*) slurryProd
-    READ(1,*) residMass
+    READ(1,*) residVol
     READ(1,*) emptyDOY1
     READ(1,*) emptyDOY2 
   END IF
@@ -316,6 +313,7 @@ PROGRAM stm
     tempIn = -99
   ELSE
     WRITE(20,*) "Error: Added slurry temperature description not recognized. Must be Constant or None (or Same). Stopping."
+    WRITE(*,*) "Error: Added slurry temperature description not recognized. Must be Constant or None (or Same). Stopping."
     STOP
   END IF
 
@@ -328,7 +326,7 @@ PROGRAM stm
     ! Rectangular
     areaFloor = width * length * nStores    ! m2
   END IF
-  massSlurry = slurryVol * dSlurry / 1000 ! Slurry mass is in metric tonnes = Mg = 1000 kg
+  massSlurry = slurryVol * dSlurry / 1000. ! Slurry mass is in metric tonnes = Mg = 1000 kg
   massSlurryInit = massSlurry
 
   ! Heat transfer resistance terms R' (K-m2/W)
@@ -366,8 +364,8 @@ PROGRAM stm
       READ(3,*,IOSTAT=fileStat) DOY, tempAir(DOY), solRad(DOY)
       fileRow = fileRow + 1
       IF (fileRow > 367) THEN
-        WRITE(*,*) 'Error: More than 1 year of data found in weather file. Stopping.'
         WRITE(20,*) 'Error: More than 1 year of data found in weather file. Stopping.'
+        WRITE(*,*) 'Error: More than 1 year of data found in weather file. Stopping.'
         STOP
       END IF
     END DO
@@ -458,8 +456,8 @@ PROGRAM stm
     READ(4,*) DOY, level(1)
     levelPrev = level(1)
     IF (DOY .NE. 1.) THEN
-      WRITE(*,*) "Error: First day of year *must* be 1 in level file! Stopping."
       WRITE(20,*) "Error: First day of year *must* be 1 in level file! Stopping."
+      WRITE(*,*) "Error: First day of year *must* be 1 in level file! Stopping."
       STOP
     END IF
     DOYprev = 1
@@ -510,7 +508,7 @@ PROGRAM stm
     END IF
 
     ! Sort out filling rate or fixed emptying
-    ! Assumes given level is for end of day
+    ! Assumes given level is for end of day (except for starting mass, which is at start of day)
     IF (.NOT. fixedFill) THEN
       IF (DOY == 1) THEN
         levelPrev = level(365)
@@ -539,7 +537,7 @@ PROGRAM stm
     ELSE
       ! Empty and add slurry at beginning of day
       IF (DOY == emptyDOY1 .OR. DOY == emptyDOY2) THEN
-        massSlurry = residMass
+        massSlurry = residVol * dSlurry / 1000.
       END IF
       ! If back at startingDOY, reset slurry mass to initial mass
       IF (DOY == startingDOY) THEN
