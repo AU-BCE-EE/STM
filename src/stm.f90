@@ -193,7 +193,7 @@ PROGRAM stm
   OPEN (UNIT=10,FILE=(''//TRIM(ID)//'_temp.csv'), STATUS='UNKNOWN')
   OPEN (UNIT=11,FILE=(''//TRIM(ID)//'_rates.csv'), STATUS='UNKNOWN')
   OPEN (UNIT=12,FILE=(''//TRIM(ID)//'_weather.csv'), STATUS='UNKNOWN')
-  OPEN (UNIT=13,FILE=(''//TRIM(ID)//'_summary.txt'), STATUS='UNKNOWN')
+  !OPEN (UNIT=13,FILE=(''//TRIM(ID)//'_summary.txt'), STATUS='UNKNOWN')
 
   ! Log file, name based on ID
   OPEN (UNIT=20,FILE=(''//TRIM(ID)//'_log.txt'), STATUS='UNKNOWN')
@@ -207,7 +207,7 @@ PROGRAM stm
   WRITE(20,'(A)') 'Starting STM model . . . '
   WRITE(*,'(A)') 'Starting STM model . . . '
   CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A)') 'STM version 0.25, 23 February 2023'
+  WRITE(20,'(A)') 'STM version 0.26, 8 March 2023'
   WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
   WRITE(20,'(A)') 
   WRITE(20,'(2A)') 'Simulation ID: ', TRIM(ID)
@@ -687,10 +687,9 @@ PROGRAM stm
   aveMassSlurry = sumMassSlurry / DBLE(nDays)
   aveSlurryProd = sumSlurryProd /  DBLE(nDays)
   retentionTime = aveMassSlurry / aveSlurryProd
-
-  WRITE(13, *) 'Average slurry mass (t): ', aveMassSlurry
-  WRITE(13, *) 'Average addition rate (t/d): ', aveSlurryProd
-  WRITE(13, *) 'Average retention time (d): ', retentionTime
+  !WRITE(13, *) 'Average slurry mass (t): ', aveMassSlurry
+  !WRITE(13, *) 'Average addition rate (t/d): ', aveSlurryProd
+  !WRITE(13, *) 'Average retention time (d): ', retentionTime
 
   WRITE(20,'(A)') 'Done!'
   WRITE(*,'(A)') 'Done!'
@@ -707,5 +706,4 @@ PROGRAM stm
   CLOSE(11)
   CLOSE(20)
 
-  STOP
 END PROGRAM stm
