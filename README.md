@@ -10,6 +10,11 @@ Find contact information for questions etc. here: <https://au.dk/sasha.hafner@bc
 Or, open an [issue](https://github.com/AU-BCE-EE/STM/issues).
 Data kindly shared by Kristina Mjöfors, Søren O. Petersen, Anna Holm Støckler, and Chih-Yu Hung were used for testing and development.
 
+# Directory structure
+* `bin`: binary files (executables) that can be downloaded and used directly without compilation for Windows, macOS, and Linux (but if these don't work, see information on installation and then compilation below)
+* `inputs`: minimal inputs as two input files: `pars.txt` contains the latest default parameter set and `user_pars.txt` contains *example* inputs from example 2 in the [STM-applications rep](https://github.com/sashahafner/STM-applications). 
+See that repo to check that you have the latest default parameter set, for other examples of `user_par.txt` files, and more information on using the STM program. 
+
 # Installation
 Binary files are provided for Linux, macOS, and Windows (32 and 64 bit) in the `bin` directory.
 (Compilation on other operating systems is of course possible--see the "Compilation" section below).
