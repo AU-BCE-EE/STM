@@ -9,7 +9,7 @@ A paper describing the model and command-line software program was just accepted
 Sasha D. Hafner developed and maintains this repo.
 Find contact information for questions etc. here: <https://au.dk/sasha.hafner@bce>.
 Or, open an [issue](https://github.com/AU-BCE-EE/STM/issues).
-Data kindly shared by Kristina Mjöfors, Søren O. Petersen, Anna Holm Støckler, and Chih-Yu Hung were used for testing and development.
+Data kindly shared by Kristina Mjöfors, Søren O. Petersen, [Anna Holm Støckler](https://github.com/Stoeckler), and [Chih-Yu Hung](https://github.com/Chih-yuHung) were used for testing and development.
 
 # Directory structure
 * `bin`: binary files (executables) that can be downloaded and used directly without compilation for Windows, macOS, and Linux (but if these don't work, see information on installation and then compilation below)
