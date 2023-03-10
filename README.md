@@ -29,8 +29,8 @@ On Windows, users will likely need to install some libraries to run STM; downloa
 And a computer restart is then necessary.
 Or, see [here](https://www.intel.com/content/www/us/en/developer/articles/tool/compilers-redistributable-libraries-by-version.html) for the latest versions.
 
-Linux is simpler, but users will need to set file permissions to executable.
-Alternatively, users can compile the program themselves (see "Compliation" section below).
+Linux and macOS should be simpler, but users will need to set file permissions to run the executable stm.
+In case of problems because of differences in the operating system used for compilation and running, users can just compile the program themselves (see "Compliation" section below).
 
 To summarize, follow these steps to install STM:
 
@@ -42,7 +42,7 @@ To summarize, follow these steps to install STM:
 5. Restart your computer
 
 ## Linux and macOS
-1. Download [`bin/Linux/stm`](https://github.com/sashahafner/STM/raw/master/bin/Linux/stm) and move it to the appropriate location
+1. Download [`bin/Linux/stm`](https://github.com/sashahafner/STM/raw/master/bin/Linux/stm) or  [`bin/macOS/stm`](https://github.com/sashahafner/STM/raw/master/bin/macOS/stm) and move it to the appropriate location
 2. Set file permissions to executable (e.g., `sudo chmod +x stm`)
 
 # Compilation
@@ -76,11 +76,15 @@ For example, an actual call might look like this:
 ./stm sim1
 ```
 
-With no files specified STM will look for the two parameter files with default names (`pars.txt` and `user_pars.txt`), with weather and slurry level calculated.
-Typically, however, input file names will be given in the call, as in the example below. 
+With no files specified STM will give some information on how to use it. 
 
 ```
-./stm sim2 pars.txt user_pars.txt
+./stm
+ stm help
+ Usage: stm[.exe] ID parfile userparfile [weatherfile] [levelfile]
+ Use stm.exe on Windows.
+ Weather file and level file are optional.
+ See https://github.com/sashahafner/STM-applications for examples.
 ```
 
 With only the two parameter files (as in both examples above), weather and slurry level variables are calculated from the settings in the user parameter file.
@@ -165,7 +169,7 @@ The overall resistance term for any route is simply the sum of relevant terms.
 The model uses the following expressions.
 
 ```
-  R(floor) = R(slurry) + R(wall) + R(soil)
+  R(bottom) = R(slurry) + R(floor) + R(soil)
   R(dwall) = R(slurry) + R(wall) + R(soil)
   R(uwall) = R(slurry) + R(wall) + R(air)
   R(top) =   R(slurry) + R(air) 
