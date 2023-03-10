@@ -3,6 +3,7 @@ Simple heat transfer model for predicting the temperature of animal slurry (anim
 The STM repository has Fortran 90 source code (in `src`), compiled binary files for Linux, macOS, and Windows (in `bin`), and example input files and default parameter file (in `inputs`).
 This README file describes the model and gives a short introduction to the software program.
 For detailed examples and more information on the software program, see the [STM-applications repo](https://github.com/sashahafner/STM-applications).
+A paper describing the model and command-line software program was just accepted for publication in SoftwareX--check back soon for a link.
 
 # Maintainer and contributors
 Sasha D. Hafner developed and maintains this repo.
@@ -12,14 +13,14 @@ Data kindly shared by Kristina Mjöfors, Søren O. Petersen, Anna Holm Støckler
 
 # Directory structure
 * `bin`: binary files (executables) that can be downloaded and used directly without compilation for Windows, macOS, and Linux (but if these don't work, see information on installation and then compilation below)
-* `inputs`: minimal inputs as two input files: `pars.txt` contains the latest default parameter set and `user_pars.txt` contains *example* inputs from example 2 in the [STM-applications rep](https://github.com/sashahafner/STM-applications). 
-See that repo to check that you have the latest default parameter set, for other examples of `user_par.txt` files, and more information on using the STM program. 
+* `inputs`: minimal inputs as two input files: `pars.txt` contains the latest default parameter set and `user_pars.txt` contains *example* inputs from example 2 in the [STM-applications rep](https://github.com/sashahafner/STM-applications). See that repo to check that you have the latest default parameter set, for other examples of `user_par.txt` files, and more information on using the STM program. 
+* `src`: source code for the STM program.
 
 # Installation
 Binary files are provided for Linux, macOS, and Windows (32 and 64 bit) in the `bin` directory.
 (Compilation on other operating systems is of course possible--see the "Compilation" section below).
-In general, "installation" is as simple as downloading the binary file (stm.exe for Windows, stm for Linux) and moving it to the directory from which you would like to call the program.
-To run [example 01](https://github.com/sashahafner/STM-applications/tree/master/examples/01) from [STM-applications repo](https://github.com/sashahafner/STM-applications) for example, put stm.exe in the "01" subdirectory and follow the instructions in the [README file](https://github.com/sashahafner/STM-applications/blob/master/examples/01/README.md).
+In general, "installation" is as simple as downloading the binary file (stm.exe for Windows, stm for Linux and macOS) and moving it to the directory from which you would like to call the program.
+To run [example 01](https://github.com/sashahafner/STM-applications/tree/master/examples/01) from [STM-applications repo](https://github.com/sashahafner/STM-applications) for example, put stm(.exe) in the "01" subdirectory and follow the instructions in the [README file](https://github.com/sashahafner/STM-applications/blob/master/examples/01/README.md).
 By setting the PATH variable, it is possible to run STM from any directory, although this is not necessary.
 
 The simplest way for non-GitHub users to do download these files is to click on the green "Code" button toward the top right of the repo main page and then "Download ZIP".
