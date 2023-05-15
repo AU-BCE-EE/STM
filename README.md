@@ -3,7 +3,9 @@ Simple heat transfer model for predicting the temperature of animal slurry (anim
 The STM repository has Fortran 90 source code (in `src`), compiled binary files for Linux, macOS, and Windows (in `bin`), and example input files and default parameter file (in `inputs`).
 This README file describes the model and gives a short introduction to the software program.
 For detailed examples and more information on the software program, see the [STM-applications repo](https://github.com/sashahafner/STM-applications).
-A paper describing the model and command-line software program was just accepted for publication in SoftwareX--check back soon for a link.
+The following open-access paper describes the model and command-line STM program:
+
+Hafner, S.D., Mjöfors, K., 2023. STM: A software tool for predicting daily temperature in stored animal slurry. SoftwareX 22, 101354. <https://doi.org/10.1016/j.softx.2023.101354>
 
 # Maintainer and contributors
 Sasha D. Hafner developed and maintains this repo.
