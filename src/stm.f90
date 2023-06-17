@@ -64,12 +64,12 @@ PROGRAM stm
   REAL :: storeDepth     ! Total depth of store/pit (m)
   REAL :: buriedDepth    ! Buried depth (m)
   REAL :: wallDepth      ! Depth at which horizontal heat transfer to soil is evaluated (m) 
-  REAL :: length, width  ! Length and width of store/pit (m)
+  REAL :: storeDia, width  ! Length and width of store/pit (m)
   REAL :: areaFloor      ! Storage floor area in contact with soil (m2)
   REAL :: areaDwall      ! Storage wall area (D for down) in contact with soil (buried) (m2)
   REAL :: areaUwall      ! Storage wall area (U for upper) in contact with air (above ground) (outside) and slurry (inside) (m2)
   REAL :: areaAir        ! Slurry upper surface area (m2)
-  INTEGER :: nStores   ! Number of stores or pits
+  !INTEGER :: nStores   ! Number of stores or pits
 
   ! Solar
   REAL :: areaSol        ! Area intercepting solar radiation (m2) 
@@ -116,6 +116,10 @@ PROGRAM stm
   REAL :: QoutPart       ! Total after some use for melting/freezing
   REAL :: sumQout        ! Sum of total for average
 
+  ! 2D stuff
+  REAL, DIMENSION(100) :: dz, dr         ! m
+  REAL, DIMENSION(100, 100) :: cellVol        !
+
   LOGICAL :: calcWeather     ! .TRUE. when weather inputs are calculated (otherwise read from file)
   LOGICAL :: fixedFill       ! .TRUE. when slurry is added at a fixed rate, specified in user par file
   LOGICAL :: useSS           ! .TRUE. when steady-state temperature was used at some point within a day
@@ -134,6 +138,9 @@ PROGRAM stm
   ! Date and time
   INTEGER, DIMENSION(8) :: dt 
   CHARACTER (LEN = 10) :: date
+
+  ! Constant
+  CONSTANT :: PI = 3.14159
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -229,10 +236,10 @@ PROGRAM stm
   READ(1,*)
   READ(1,*) nDays
   READ(1,*) startingDOY
-  READ(1,*) nStores
+  !READ(1,*) nStores
   READ(1,*) storeDepth
   READ(1,*) buriedDepth
-  READ(1,*) length
+  READ(1,*) storeDia
   READ(1,*) width
   READ(1,*) areaAir
   READ(1,*) areaSol
@@ -321,10 +328,12 @@ PROGRAM stm
   wallDepth = 0.5 * buriedDepth             ! m
   IF (width .EQ. 0.) THEN
     ! Circular
-    areaFloor = PI * (length / 2.)**2       ! m2
+    areaFloor = PI * (storeDia / 2.)**2       ! m2
   ELSE 
     ! Rectangular
-    areaFloor = width * length * nStores    ! m2
+    STOP
+    ! Only circular now
+    areaFloor = width * storeDia ! m2
   END IF
   massSlurry = slurryVol * dSlurry / 1000. ! Slurry mass is in metric tonnes = Mg = 1000 kg
   massSlurryInit = massSlurry
@@ -493,6 +502,38 @@ PROGRAM stm
   cpSlurry = cpLiquid
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Cells
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  nz = CEILING(storeDepth / dz)
+  nr = CEILING(storeDia / 2 / dz)
+
+!  ! Cell volumes
+!  DO Z = 1,nz,1
+!    DO R = 1,nr,1
+!      cellVol(Z,R) = dz * PI  * (2 * (R * dr) * dr + dr**2)
+!    END DO
+!  END DO
+
+  ! Outermost ring is not full of slurry
+  fullr = FLOOR(storeDia / dr)
+  addr = storeDia - fullr * dr
+
+  IF (addr < 0.1) THEN
+    nr = fullr
+    addr = 0
+  END IF
+
+  ! Surface areas
+  DO R = 1,fullr,1
+    sarea(R) = PI  * (2 * (R * dr) + dr**2)
+  END DO
+  IF (nr > fullr) THEN
+    sarea(fullr) = PI  * (2 * (R * addr) + addr**2)
+  END IF
+
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Start simulation
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -548,8 +589,14 @@ PROGRAM stm
       END IF
     END IF
 
-    ! Radiation fixed for day (W = J/s)
-    Qrad = - absorp * solRad(DOY) * areaSol
+    ! Radiation fixed for day (W = J/s) so outside of hourly loop
+    ! Radiation is 0 except for surface
+    DO R = 1,nr,1
+      DO Z = 1,nz - 1,1
+       Qrad(Z,R) = 0.
+      END DO
+      Qrad(nz,R) = - sarea(R) * absorp * solRad(DOY)
+    END DO
 
     ! Start hour loop
     sumTempSlurry = 0
@@ -573,32 +620,59 @@ PROGRAM stm
     ! Hour loop
     DO HR = 1,24,1
 
+       NTS: variable name must be changed to TOTAL mass
       ! Update slurry mass, distributing inflow evenly across day
       !   t           t            t/d     / h/d * h = t         
       massSlurry = massSlurry + slurryProd / 24. * 1
 
       ! Get depth and wall area
       slurryDepth = 1000 * massSlurry / (dSlurry*areaFloor)  ! Slurry depth in m
-      IF (width .EQ. 0.) THEN
-        ! Circular
-        areaDwall = MIN(slurryDepth, buriedDepth) * PI * length * nStores
-        areaUwall = MAX(slurryDepth - buriedDepth, 0.) * PI * length * nStores
-      ELSE 
-        ! Rectangular
-        areaDwall = MIN(slurryDepth, buriedDepth) * 2. * (length + width) * nStores
-        areaUwall = MAX(slurryDepth - buriedDepth, 0.) * 2. * (length + width) * nStores
-      END IF
+
+      ! Circular
+      areaDwall = MIN(slurryDepth, buriedDepth) * PI * storeDia 
+      areaUwall = MAX(slurryDepth - buriedDepth, 0.) * PI * storeDia
 
       ! Check slurry depth
       IF (slurryDepth .GT. storeDepth) THEN
         WRITE(20,*) 'Warning: day of year ', DOY, ', hour', hr, ', Slurry depth is greater than maximum depth! Check inputs.'
         WRITE(20,*)
       END IF
-    
+
+      ! Mass of slurry in each cell
+      ! Put mass into cells
+      ! Find locations z that are full of slurry (top cells will be partially full only)
+      fullz = FLOOR(slurryDepth / dz)
+      addz = slurryDepth - fullz * dz
+      IF (addz > 0.1) THEN
+        nz = fullz + 1
+      ELSE 
+        nz = fullz
+        addz = 0
+      END IF
+
+      ncells = nr * nz
+
+      DO Z = 1,fullz,1
+        DO R = 1,fullr,1
+          slurryMass(Z,R) = dSlurry * dz * PI  * (2 * (R * dr) + dr**2)
+        END DO
+        IF (nr > fullr) THEN
+          slurryMass(Z,nr) = dSlurry * dz * PI  * (2 * (R * addr) + addr**2)
+        END IF
+      END DO
+      IF (nz > fullz) THEN
+        slurryMass(nz,nr) = dSlurry * addz * PI  * (2 * (R * addr) + addr**2)
+      END IF
+   
       ! Calculate heat transfer rates, all in watts (J/s)
       ! Qfeed is hypothetical rate pretending to make up difference relative to new mass at tempSlurry
       ! J/s               K           kg/t      t/d     / s/d    *  J/kg-K   
       Qfeed = (tempSlurry - tempIn) * 1000 * slurryProd / 86400. * cpLiquid
+
+      distribute Qfeed proporational to slurry mass
+      NTS
+      WIP
+
       ! J/s   J/s-m2-K     K               K          m2
       Qslur2air = (tempSlurry - tempAir(DOY)) / Rtop * areaAir
       Qslur2floor = (tempSlurry - tempFloor(DOY)) / Rbottom * areaFloor
