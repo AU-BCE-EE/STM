@@ -80,7 +80,7 @@ PROGRAM stm
   REAL :: trigPartRad    ! Sine part of radiation expression (intermediate in calculation)
   
   ! Other slurry variables
-  REAL :: massSlurry, massSlurryInit, massFrozen = 0   ! Slurry mass (Mg = 1000 kg = metric tonnes)
+  REAL :: slurryMassTot, slurryMassTotInit, massFrozen = 0   ! Slurry mass (Mg = 1000 kg = metric tonnes)
   REAL :: slurryVol      ! Initial slurry volume (m3) NTS not consistent name
   REAL :: slurryProd     ! Slurry production rate (= inflow = outflow) (Mg/d)
 
@@ -335,8 +335,8 @@ PROGRAM stm
     ! Only circular now
     areaFloor = width * storeDia ! m2
   END IF
-  massSlurry = slurryVol * dSlurry / 1000. ! Slurry mass is in metric tonnes = Mg = 1000 kg
-  massSlurryInit = massSlurry
+  slurryMassTot = slurryVol * dSlurry / 1000. ! Slurry mass is in metric tonnes = Mg = 1000 kg
+  slurryMassTotInit = slurryMassTot
 
   ! Heat transfer resistance terms R' (K-m2/W)
   Rbottom = Rslur + Rfloor + Rsoil
@@ -504,32 +504,29 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Cells
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! R = 1 is centermost ring
+  ! Z = 1 is bottom layer
 
   nz = CEILING(storeDepth / dz)
   nr = CEILING(storeDia / 2 / dz)
 
-!  ! Cell volumes
-!  DO Z = 1,nz,1
-!    DO R = 1,nr,1
-!      cellVol(Z,R) = dz * PI  * (2 * (R * dr) * dr + dr**2)
-!    END DO
-!  END DO
-
   ! Outermost ring is not full of slurry
   fullr = FLOOR(storeDia / dr)
   addr = storeDia - fullr * dr
+  ! Same for top layer but this changes over time and is sorted out below
 
-  IF (addr < 0.1) THEN
+  ! Ignore layer only 10% of normal size
+  IF (addr < 0.1 * dr) THEN
     nr = fullr
     addr = 0
   END IF
 
   ! Surface areas
   DO R = 1,fullr,1
-    sarea(R) = PI  * (2 * (R * dr) + dr**2)
+    horArea(R) = PI  * (2 * (R + dr) + dr**2)
   END DO
   IF (nr > fullr) THEN
-    sarea(fullr) = PI  * (2 * (R * addr) + addr**2)
+    horArea(fullr) = PI  * (2 * (R + addr) + addr**2)
   END IF
 
 
@@ -558,34 +555,34 @@ PROGRAM stm
       END IF
       IF (level(DOY) .GT. levelPrev) THEN
         ! NTS: some inconsistency about slurry level defined at beginning or end of day
-        massSlurry = levelPrev * areaFloor * dSlurry/1000.
+        slurryMassTot = levelPrev * areaFloor * dSlurry/1000.
         ! Daily slurry addition
         slurryProd = (level(DOY) - levelPrev) * areaFloor * dSlurry/1000.
       ELSE IF (level(DOY) .EQ. levelPrev) THEN
         ! No addition
         slurryProd = 0.0
-        massSlurry = level(DOY) * areaFloor * dSlurry/1000.
+        slurryMassTot = level(DOY) * areaFloor * dSlurry/1000.
       ELSE IF (level(DOY) .LT. levelPrev) THEN
         ! Removal, so fixed slurry mass
         ! NTS: removal at beginning of day, addition at end. . .
-        massSlurry = level(DOY) * areaFloor * dSlurry/1000.
+        slurryMassTot = level(DOY) * areaFloor * dSlurry/1000.
         slurryProd = 0.0
-        IF (massFrozen .GT. massSlurry) THEN
-          massFrozen = massSlurry
+        IF (massFrozen .GT. slurryMassTot) THEN
+          massFrozen = slurryMassTot
         END IF
       END IF
       levelPrev = level(DOY)
     ELSE
       ! Empty and add slurry at beginning of day
       IF (DOY == emptyDOY1 .OR. DOY == emptyDOY2) THEN
-        massSlurry = residVol * dSlurry / 1000.
+        slurryMassTot = residVol * dSlurry / 1000.
       END IF
       ! If back at startingDOY, reset slurry mass to initial mass
       IF (DOY == startingDOY) THEN
-        massSlurry = massSlurryInit
+        slurryMassTot = slurryMassTotInit
       END IF
-      IF (massFrozen .GT. massSlurry) THEN
-        massFrozen = massSlurry
+      IF (massFrozen .GT. slurryMassTot) THEN
+        massFrozen = slurryMassTot
       END IF
     END IF
 
@@ -595,7 +592,7 @@ PROGRAM stm
       DO Z = 1,nz - 1,1
        Qrad(Z,R) = 0.
       END DO
-      Qrad(nz,R) = - sarea(R) * absorp * solRad(DOY)
+      Qrad(nz,R) = - horArea(R) * absorp * solRad(DOY)
     END DO
 
     ! Start hour loop
@@ -620,13 +617,12 @@ PROGRAM stm
     ! Hour loop
     DO HR = 1,24,1
 
-       NTS: variable name must be changed to TOTAL mass
       ! Update slurry mass, distributing inflow evenly across day
-      !   t           t            t/d     / h/d * h = t         
-      massSlurry = massSlurry + slurryProd / 24. * 1
+      !   t                 t            t/d     / h/d * h = t         
+      slurryMassTot = slurryMassTot + slurryProd / 24. * 1
 
       ! Get depth and wall area
-      slurryDepth = 1000 * massSlurry / (dSlurry*areaFloor)  ! Slurry depth in m
+      slurryDepth = 1000 * slurryMassTot / (dSlurry*areaFloor)  ! Slurry depth in m
 
       ! Circular
       areaDwall = MIN(slurryDepth, buriedDepth) * PI * storeDia 
@@ -639,11 +635,10 @@ PROGRAM stm
       END IF
 
       ! Mass of slurry in each cell
-      ! Put mass into cells
       ! Find locations z that are full of slurry (top cells will be partially full only)
       fullz = FLOOR(slurryDepth / dz)
       addz = slurryDepth - fullz * dz
-      IF (addz > 0.1) THEN
+      IF (addz > 0.1 * dz) THEN
         nz = fullz + 1
       ELSE 
         nz = fullz
@@ -654,32 +649,52 @@ PROGRAM stm
 
       DO Z = 1,fullz,1
         DO R = 1,fullr,1
-          slurryMass(Z,R) = dSlurry * dz * PI  * (2 * (R * dr) + dr**2)
+          cellMass(Z,R) = dSlurry * dz * PI  * (2 * (R * dr) + dr**2)
         END DO
         IF (nr > fullr) THEN
-          slurryMass(Z,nr) = dSlurry * dz * PI  * (2 * (R * addr) + addr**2)
+          cellMass(Z,nr) = dSlurry * dz * PI  * (2 * (R * addr) + addr**2)
         END IF
       END DO
       IF (nz > fullz) THEN
-        slurryMass(nz,nr) = dSlurry * addz * PI  * (2 * (R * addr) + addr**2)
+        cellMass(nz,nr) = dSlurry * addz * PI  * (2 * (R * addr) + addr**2)
       END IF
    
       ! Calculate heat transfer rates, all in watts (J/s)
+      ! Set all heat transfer terms to 0 to start
+      DO Z = 1,nz,1
+        DO R = 1,nr,1
+          Qfeed(Z,R) = 0.0
+          Qslur2air = 0.0
+          Qslur2floor = 0.0
+          Qslur2dwall = 0.0
+          Qslur2uwall = 0.0
+        END DO
+      END DO
+
       ! Qfeed is hypothetical rate pretending to make up difference relative to new mass at tempSlurry
       ! J/s               K           kg/t      t/d     / s/d    *  J/kg-K   
-      Qfeed = (tempSlurry - tempIn) * 1000 * slurryProd / 86400. * cpLiquid
+      QfeedTot = (tempSlurry - tempIn) * 1000 * slurryProd / 86400. * cpLiquid
 
-      distribute Qfeed proporational to slurry mass
-      NTS
+      ! Distribute Qfeed proportional to slurry mass
+      DO Z = 1,nz,1
+        DO R = 1,nr,1
+          Qfeed(Z,R) = QfeedTot * cellMass(Z,R) / slurryMassTot
+        END DO
+      END DO
+
+      ! Floor and air
+      DO R = 1,r1,1
+        Qslur2floor(1,R) = (tempSlurry(1,R) - tempFloor(DOY)) / Rbottom * horArea(1,R)
+        Qslur2air(nz,R) = (tempSlurry(1,R) - tempAir(DOY)) / Rtop * horArea(1,R)
+      END DO
+
       WIP
-
+      WIP
       ! J/s   J/s-m2-K     K               K          m2
-      Qslur2air = (tempSlurry - tempAir(DOY)) / Rtop * areaAir
-      Qslur2floor = (tempSlurry - tempFloor(DOY)) / Rbottom * areaFloor
       Qslur2dwall = (tempSlurry - tempWall(DOY)) / Rdwall * areaDwall
       Qslur2uwall = (tempSlurry - tempAir(DOY)) / Ruwall * areaUwall
       ! J/s      J/s-m3  *  t        /   kg/m3 * kg/t
-      Qgen = - heatGen * massSlurry / dSlurry * 1000.
+      Qgen = - heatGen * slurryMassTot / dSlurry * 1000.
       ! W
       Qslur2wall = Qslur2dwall + Qslur2uwall
       Qout = Qfeed + Qrad + Qslur2air + Qslur2wall + Qslur2floor + Qgen
@@ -692,20 +707,20 @@ PROGRAM stm
       massFrozen = 0.0
 
       ! Potential temperature change (omitting latent energy and assuming liquid slurry for now)
-      dTemp = - HHadj / (1000. * cpSlurry * massSlurry)
+      dTemp = - HHadj / (1000. * cpSlurry * slurryMassTot)
 
       ! Freeze and thaw
       IF (tempSlurry + dTemp .LT. tempFreeze) THEN
         ! Use HH to get to 0 C
-        HHadj = HHadj + (tempFreeze - tempSlurry) * 1000. * cpSlurry * massSlurry
+        HHadj = HHadj + (tempFreeze - tempSlurry) * 1000. * cpSlurry * slurryMassTot
         tempSlurry = tempFreeze
 
         IF (HHadj .GT. 0.0) THEN
           ! Still some cooling available for freezing
           massFrozen = HHadj / hfSlurry / 1000.
-          IF (massFrozen .GE. massSlurry) THEN
+          IF (massFrozen .GE. slurryMassTot) THEN
             ! More than enough to freeze all slurry
-            massFrozen = massSlurry
+            massFrozen = slurryMassTot
             HHadj = HHadj - 1000. * massFrozen * hfSlurry
           ELSE
             ! Only some freezes and temperature stays at 0C
@@ -716,10 +731,10 @@ PROGRAM stm
       END IF
 
       ! Weighted cp
-      cpSlurry = massFrozen / massSlurry * cpFrozen + (1.0 - massFrozen / massSlurry) * cpLiquid
+      cpSlurry = massFrozen / slurryMassTot * cpFrozen + (1.0 - massFrozen / slurryMassTot) * cpLiquid
 
       ! Recalculate dT, now actual temperature change
-      dTemp = - HHadj / (1000. * cpSlurry * massSlurry)
+      dTemp = - HHadj / (1000. * cpSlurry * slurryMassTot)
       tempSlurry = tempSlurry + dTemp
       
       ! Steady-state temperature
@@ -743,10 +758,10 @@ PROGRAM stm
 
     END DO
 
-    sumMassSlurry = sumMassSlurry + massSlurry
+    sumMassSlurry = sumMassSlurry + slurryMassTot
     sumSlurryProd = sumSlurryProd + slurryProd
 
-    WRITE(10,"(I4,',',I3,',',I4,8(',',F8.2))") DOS, DOY, YR, massSlurry, massFrozen, slurryDepth, tempAir(DOY), & 
+    WRITE(10,"(I4,',',I3,',',I4,8(',',F8.2))") DOS, DOY, YR, slurryMassTot, massFrozen, slurryDepth, tempAir(DOY), & 
         & tempWall(DOY), tempFloor(DOY), tempIn, sumTempSlurry/24.
 
     WRITE(11,"(I4,',',I3,',',I4,6(',',F11.3),4(',',F15.0),',',1F5.2,',',L5)") DOS, DOY, YR, Qrad, Qgen, Qslur2air, &
