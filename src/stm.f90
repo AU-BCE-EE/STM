@@ -242,10 +242,9 @@ PROGRAM stm
   READ(2,*) absorp, soilConstDepth, soilOffset, heatGen
 
   ! Output file header
-  !WRITE(10,"(A)") 'Day of sim.,Day of year,Year,Slurry mass,Frozen mass,Slurry depth,Air T,Wall T,Floor T,In T,Slurry T'
-  !WRITE(10,"(A)") ',,,(Mg = 1000 kg),(Mg = 1000 kg),(m),(deg. C),(deg. C),(deg. C),(deg. C),(deg. C)'
-  !WRITE(10,"(A)") 'day,doy,year,slurry_mass,frozen_mass,slurry_depth,air_temp,wall_temp,floor_temp,in_temp,slurry_temp'
- 
+  WRITE(10,"(A)") 'Day of sim.,Day of year,Year,Z position,R position,Air T,Floor T,Slurry T'
+  WRITE(10,"(A)") ',,,,,(deg. C),(deg. C),(deg. C)'
+  WRITE(10,"(A)") 'day,doy,year,z,r,air_temp,floor_temp,slurry_temp'
 
   !WRITE(11,"(A)") 'Day of sim.,Day of year,Year,Radiation,Generation,Air,Floor,Lower wall,Upper wall,Feed,Total,Total step,&
   !  &          Total step adjusted,Steady state temp,Steady state used'
@@ -503,17 +502,10 @@ PROGRAM stm
 
     END DO
 
-    Z = 1
-    R = 1
-    WRITE(*,*) DOY, tempAir(DOY), temp(Z, R), Qrad(Z,R), Qslur2air(Z,R), Qconv(Z,R)
-    Z = nz 
-    R = nr
-    WRITE(*,*) DOY, tempAir(DOY), temp(Z, R), Qrad(Z,R), Qslur2air(Z,R), Qconv(Z,R)
-
     ! Export ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     DO Z = 1,nz,1
       DO R = 1,nr,1
-      WRITE(10,*) DOS, DOY, YR, Z, R, tempAir(DOY), tempFloor(DOY), temp(Z,R)
+      WRITE(10,"(I4,',',I3,',',I4,',',I3,',',I3,3(',',F8.2))") DOS, DOY, YR, Z, R, tempAir(DOY), tempFloor(DOY), temp(Z,R)
       END DO
     END DO
 

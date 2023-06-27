@@ -1,8 +1,8 @@
 Settings for STM heat transfer model
-1095      Duration of simulation (days)
+365       Duration of simulation (days)
 1         Starting day of simulation as day of year (1-365, no leap years)
 4.0       Slurry level (depth) (m)
-36        Tank diameter (m)
+11        Tank diameter (m)
 15        Initial slurry temperature (degrees C)
-0.5       Cell height (m)
-0.5       Cell width (m)
+20        Number of vertical layers 
+20        Number of radial layers
