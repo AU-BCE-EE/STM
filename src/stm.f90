@@ -25,7 +25,11 @@ PROGRAM stm
   INTEGER :: fileRow     ! File row to check for problem
 
   ! Discretization
+  INTEGER :: Z, R
   INTEGER :: nz, nr 
+  REAL :: dz, dr
+  REAL, DIMENSION(20) :: horArea, verArea, cr
+  REAL, DIMENSION(20, 20) :: cellVol        !
 
   ! Simulation ID
   CHARACTER (LEN=10) :: ID ! ID code of simulation
@@ -47,35 +51,17 @@ PROGRAM stm
   REAL :: maxAnnTemp     ! Maximum daily average air temperature over the year
   REAL :: minAnnTemp     ! Minimum daily average air temperature over the year
   REAL :: tempInitial    ! Initial slurry temperature
-  REAL :: tempSlurry     ! Hourly slurry temperature 
-  REAL :: tempSS         ! Steady-state slurry temperature used to deal with numerical instability
-  REAL :: tempIn         ! Temperature of slurry when added to store/pit/tank/lagoon
-  CHARACTER (LEN=5) :: tempInChar! Temperature of slurry when added to store/pit/tank/lagoon as character for flexible reading in
+  REAL, DIMENSION(20,20) :: temp ! Hourly slurry temperature 
   REAL :: trigPartTemp   ! Sine part of temperature expression (intermediate in calculation)
-  REAL :: residVol      ! Mass of slurry left behind when emptying
 
   ! Sums and averages
-  REAL :: sumTempSlurry  ! Sum of hourly slurry temperatures for calculating daily mean
-  REAL :: sumMassSlurry  ! Sum of 
-  REAL :: sumSlurryProd  ! Sum of 
-  REAL :: aveMassSlurry  ! Average
-  REAL :: aveSlurryProd  ! Average
   REAL :: retentionTime
 
   ! Geometry of storage structure
-  REAL :: slurryDepth    ! Depth of slurry in store/pit (m)
-  REAL :: storeDepth     ! Total depth of store/pit (m)
-  REAL :: buriedDepth    ! Buried depth (m)
-  REAL :: wallDepth      ! Depth at which horizontal heat transfer to soil is evaluated (m) 
-  REAL :: storeDia, width  ! Length and width of store/pit (m)
-  REAL :: areaFloor      ! Storage floor area in contact with soil (m2)
-  REAL :: areaDwall      ! Storage wall area (D for down) in contact with soil (buried) (m2)
-  REAL :: areaUwall      ! Storage wall area (U for upper) in contact with air (above ground) (outside) and slurry (inside) (m2)
-  REAL :: areaAir        ! Slurry upper surface area (m2)
-  !INTEGER :: nStores   ! Number of stores or pits
+  REAL :: depth          ! Slurry depth (m)
+  REAL :: storeDia       ! Length and width of store/pit (m)
 
   ! Solar
-  REAL :: areaSol        ! Area intercepting solar radiation (m2) 
   REAL :: absorp         ! Slurry or cover effective absorptivity (dimensionless)
   REAL :: maxAnnRad      ! Maximum daily average radiation over the year
   REAL :: minAnnRad      ! Minimum daily average radiation over the year
@@ -85,16 +71,13 @@ PROGRAM stm
   ! Other slurry variables
   REAL :: slurryMassTot, slurryMassTotInit, massFrozen = 0   ! Slurry mass (Mg = 1000 kg = metric tonnes)
   REAL :: slurryVol      ! Initial slurry volume (m3) NTS not consistent name
-  REAL :: slurryProd     ! Slurry production rate (= inflow = outflow) (Mg/d)
-
-  ! Level variables
-  REAL, DIMENSION(365) :: level, rLevelAve
-  REAL :: levelPrev
+  REAL, DIMENSION(20,20) :: cellMass ! Slurry in cell (kg)
 
   ! Heat transfer coefficients and related variables
-  REAL :: Rair, Rwall, Rfloor, Rslur, Rsoil ! User-entered resistance terms K-m2/W
-  REAL :: Ruwall, Rdwall, Rbottom, Rtop ! Calculated resistance K-m2/W 
-  REAL :: cpSlurry            ! Heat capacity of slurry J/kg-K
+  REAL :: Rair, Rwall, Rfloor, Rsoil ! User-entered resistance terms K-m2/W
+  REAL :: kConv          ! Slurry thermal conductivity
+  REAL :: Rewall, Rbottom, Rtop ! Calculated resistance K-m2/W 
+  REAL :: cpSlurry             ! Heat capacity of slurry J/kg-K
   REAL :: cpLiquid, cpFrozen  ! Heat capacity of liquid or frozen slurry J/kg-K
   REAL :: tempFreeze     ! Freezing point of slurry (degrees C)
   REAL :: hfSlurry       ! Latent heat of fusion of slurry J/kg
@@ -109,19 +92,16 @@ PROGRAM stm
   REAL :: sumHH, sumHHadj ! Sum for average
 
   ! Heat flow variables in W out of slurry
-  REAL :: Qrad           ! "To" sun
-  REAL :: Qslur2air      ! To air
-  REAL :: Qslur2wall, Qslur2dwall, Qslur2uwall   ! Out through wall (to air or soil)
-  REAL :: Qslur2floor    ! Out through floor to soil
-  REAL :: Qfeed          ! Loss due to feeding
-  REAL :: Qgen           ! Heat generation
-  REAL :: Qout           ! Total
-  REAL :: QoutPart       ! Total after some use for melting/freezing
-  REAL :: sumQout        ! Sum of total for average
-
-  ! 2D stuff
-  REAL, DIMENSION(100) :: dz, dr         ! m
-  REAL, DIMENSION(100, 100) :: cellVol        !
+  REAL, DIMENSION(20,20) :: Qrad           ! "To" sun
+  REAL, DIMENSION(20,20) :: Qslur2air      ! To air
+  REAL, DIMENSION(20,20) :: Qslur2wall     ! Out through wall (to air)
+  REAL, DIMENSION(20,20) :: Qslur2floor    ! Out through floor to soil
+  REAL, DIMENSION(20,20) :: Qgen           ! Heat generation
+  REAL, DIMENSION(20,20) :: Qconv          ! Convection
+  REAL, DIMENSION(20,20) :: Qout           ! Total
+  REAL, DIMENSION(20,20) :: QoutPart       ! Total after some use for melting/freezing
+  REAL, DIMENSION(20,20) :: Qtot
+  REAL, DIMENSION(20,20) :: sumQout        ! Sum of total for average
 
   LOGICAL :: calcWeather     ! .TRUE. when weather inputs are calculated (otherwise read from file)
   LOGICAL :: fixedFill       ! .TRUE. when slurry is added at a fixed rate, specified in user par file
@@ -142,8 +122,6 @@ PROGRAM stm
   INTEGER, DIMENSION(8) :: dt 
   CHARACTER (LEN = 10) :: date
 
-  ! Constant
-  CONSTANT :: PI = 3.14159
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
@@ -164,14 +142,6 @@ PROGRAM stm
     CALL GET_COMMAND_ARGUMENT(4, weatherFile)
     calcWeather = .FALSE.
     fixedFill = .TRUE.
-  ELSE IF (numArgs .EQ. 5) THEN
-    CALL GET_COMMAND_ARGUMENT(1, ID)
-    CALL GET_COMMAND_ARGUMENT(2, parFile)
-    CALL GET_COMMAND_ARGUMENT(3, userParFile)
-    CALL GET_COMMAND_ARGUMENT(4, weatherFile)
-    CALL GET_COMMAND_ARGUMENT(5, levelFile)
-    calcWeather = .FALSE.
-    fixedFill = .FALSE.
   ELSE
     WRITE(*,*) 'stm help'
     WRITE(*,*) 'Usage: stm[.exe] ID parfile userparfile [weatherfile] [levelfile]'
@@ -190,18 +160,14 @@ PROGRAM stm
   IF (.NOT. calcWeather) THEN
     OPEN (UNIT=3, FILE=weatherFile, STATUS='OLD')
   END IF
-  IF (.NOT. fixedFill) THEN
-    OPEN (UNIT=4, FILE=levelFile, STATUS='OLD')
-  END IF
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Output and log files
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Output files, name based on ID
   OPEN (UNIT=10,FILE=(''//TRIM(ID)//'_temp.csv'), STATUS='UNKNOWN')
-  OPEN (UNIT=11,FILE=(''//TRIM(ID)//'_rates.csv'), STATUS='UNKNOWN')
-  OPEN (UNIT=12,FILE=(''//TRIM(ID)//'_weather.csv'), STATUS='UNKNOWN')
-  !OPEN (UNIT=13,FILE=(''//TRIM(ID)//'_summary.txt'), STATUS='UNKNOWN')
+  !OPEN (UNIT=11,FILE=(''//TRIM(ID)//'_rates.csv'), STATUS='UNKNOWN')
+  !OPEN (UNIT=12,FILE=(''//TRIM(ID)//'_weather.csv'), STATUS='UNKNOWN')
 
   ! Log file, name based on ID
   OPEN (UNIT=20,FILE=(''//TRIM(ID)//'_log.txt'), STATUS='UNKNOWN')
@@ -240,27 +206,11 @@ PROGRAM stm
   READ(1,*) nDays
   READ(1,*) startingDOY
   !READ(1,*) nStores
-  READ(1,*) storeDepth
-  READ(1,*) buriedDepth
+  READ(1,*) depth
   READ(1,*) storeDia
-  READ(1,*) width
-  READ(1,*) areaAir
-  READ(1,*) areaSol
-  IF (fixedFill) THEN
-    READ(1,*) slurryVol
-  ELSE
-    READ(1,*)
-    slurryVol = 0.0
-  END IF
   READ(1,*) tempInitial
-  READ(1,*) tempInSetting
-  READ(1,*) tempInChar
-  IF (fixedFill) THEN
-    READ(1,*) slurryProd
-    READ(1,*) residVol
-    READ(1,*) emptyDOY1
-    READ(1,*) emptyDOY2 
-  END IF
+  READ(1,*) nz
+  READ(1,*) nr
 
   IF (calcWeather) THEN
     READ(1,*)
@@ -282,68 +232,37 @@ PROGRAM stm
   READ(2,*) dSlurry, cpLiquid, cpFrozen, hfSlurry, tempFreeze
   READ(2,*) 
   READ(2,*) 
-  READ(2,*) Rair, Rwall, Rfloor, Rslur, Rsoil
+  READ(2,*) kConv
+  READ(2,*) 
+  READ(2,*) 
+  READ(2,*) Rair, Rwall, Rfloor, Rsoil
   READ(2,*) 
   READ(2,*) 
   READ(2,*) 
   READ(2,*) absorp, soilConstDepth, soilOffset, heatGen
 
   ! Output file header
-  WRITE(10,"(A)") 'Day of sim.,Day of year,Year,Slurry mass,Frozen mass,Slurry depth,Air T,Wall T,Floor T,In T,Slurry T'
-  WRITE(10,"(A)") ',,,(Mg = 1000 kg),(Mg = 1000 kg),(m),(deg. C),(deg. C),(deg. C),(deg. C),(deg. C)'
-  WRITE(10,"(A)") 'day,doy,year,slurry_mass,frozen_mass,slurry_depth,air_temp,wall_temp,floor_temp,in_temp,slurry_temp'
+  !WRITE(10,"(A)") 'Day of sim.,Day of year,Year,Slurry mass,Frozen mass,Slurry depth,Air T,Wall T,Floor T,In T,Slurry T'
+  !WRITE(10,"(A)") ',,,(Mg = 1000 kg),(Mg = 1000 kg),(m),(deg. C),(deg. C),(deg. C),(deg. C),(deg. C)'
+  !WRITE(10,"(A)") 'day,doy,year,slurry_mass,frozen_mass,slurry_depth,air_temp,wall_temp,floor_temp,in_temp,slurry_temp'
  
 
-  WRITE(11,"(A)") 'Day of sim.,Day of year,Year,Radiation,Generation,Air,Floor,Lower wall,Upper wall,Feed,Total,Total step,&
-    &          Total step adjusted,Steady state temp,Steady state used'
-  WRITE(11,"(A)") ',,,(W),(W),(W),(W),(W),(W),(W),(W),(J),(J),,'
-  WRITE(11,"(A)") 'day,doy,year,rad,gen,air,floor,lower_wall,upper_wall,feed,total,total_step,total_adjusted,&
-    &          steady_state_used,steady_state_temp'
+  !WRITE(11,"(A)") 'Day of sim.,Day of year,Year,Radiation,Generation,Air,Floor,Lower wall,Upper wall,Feed,Total,Total step,&
+  !  &          Total step adjusted,Steady state temp,Steady state used'
+  !WRITE(11,"(A)") ',,,(W),(W),(W),(W),(W),(W),(W),(W),(J),(J),,'
+  !WRITE(11,"(A)") 'day,doy,year,rad,gen,air,floor,lower_wall,upper_wall,feed,total,total_step,total_adjusted,&
+  !  &          steady_state_used,steady_state_temp'
 
-  WRITE(12,"(A)") 'Day of sim.,Day of year,Year,Air T,Radiation'
-  WRITE(12,"(A)") ',,,(deg. C),(W/m2)'
-  WRITE(12,"(A)") 'day,doy,year,air_temp,rad'
+  !WRITE(12,"(A)") 'Day of sim.,Day of year,Year,Air T,Radiation'
+  !WRITE(12,"(A)") ',,,(deg. C),(W/m2)'
+  !WRITE(12,"(A)") 'day,doy,year,air_temp,rad'
 
   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Initial calculations
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  ! Sort out tempreature of added slurry
-  IF (tempInsetting .EQ. 'Con' .OR. tempInSetting .EQ. 'con') THEN
-    constantTempIn = .TRUE.
-    READ(tempInChar, *) tempIn
-  ELSE IF (tempInSetting .EQ. 'Non' .OR. tempInSetting .EQ. 'non' .OR. tempInsetting .EQ. 'Sam' .OR. tempInSetting .EQ. 'sam') THEN
-    constantTempIn = .FALSE.
-    airTempIn = .FALSE.
-    tempIn = -99
-  ELSE IF (tempInsetting .EQ. 'Air' .OR. tempInSetting .EQ. 'air') THEN
-    constantTempIn = .FALSE.
-    airTempIn = .TRUE.
-    tempIn = -99
-  ELSE
-    WRITE(20,*) "Error: Added slurry temperature description not recognized. Must be Constant or None (or Same). Stopping."
-    WRITE(*,*) "Error: Added slurry temperature description not recognized. Must be Constant or None (or Same). Stopping."
-    STOP
-  END IF
-
-  ! Calculate some geometry-related variables
-  wallDepth = 0.5 * buriedDepth             ! m
-  IF (width .EQ. 0.) THEN
-    ! Circular
-    areaFloor = PI * (storeDia / 2.)**2       ! m2
-  ELSE 
-    ! Rectangular
-    STOP
-  END IF
-  slurryMassTot = slurryVol * dSlurry / 1000. ! Slurry mass is in metric tonnes = Mg = 1000 kg
-  slurryMassTotInit = slurryMassTot
-
-  ! Heat transfer resistance terms R' (K-m2/W)
-  Rbottom = Rslur + Rfloor + Rsoil
-  Rdwall = Rslur + Rwall + Rsoil 
-  Ruwall = Rslur + Rwall + Rair
-  Rtop = Rslur + Rair 
+  !slurryMassTot = slurryVol * dSlurry / 1000. ! Slurry mass is in metric tonnes = Mg = 1000 kg
 
   ! Determine tempAir, solRad, and soil temperatures for each day within a complete year
   ! Start day loop
@@ -383,51 +302,7 @@ PROGRAM stm
   END IF
 
   ! Soil temperature based on moving average
-  wallAvePeriod = MIN(wallDepth/soilConstDepth, 1.)*365
-  floorAvePeriod = MIN(buriedDepth/soilConstDepth, 1.)*365
-
-  ! Avoid very short averaging periods that are not plausible (because floor is actually covered with tank, so 1 d impossible)
-  IF (floorAvePeriod .LT. 5.) THEN
-    floorAvePeriod = 5.
-  END IF
-
-  IF (wallAvePeriod .LT. 2.) THEN
-    wallAvePeriod = 2.
-  END IF
-
-  ! Calculate moving average for first day of year
-  ! Wall first
-  IF (wallAvePeriod .GE. 365) THEN
-    tempWall(:) = tempAirAve
-  ELSE IF (wallAvePeriod > 1) THEN
-    ! First need to calculate value for DOY = 1
-    tempWall(1) = tempAir(1) / wallAvePeriod
-    DO DOY = 365 - wallAvePeriod + 2,365,1
-      tempWall(1) = tempWall(1) + tempAir(DOY)/wallAvePeriod
-    END DO
-    IF (tempWall(1) .LT. 0.) THEN
-      tempWall(1) = tempWall(1) / soilFreezeDiv
-    END IF
-
-    DO DOY = 2,365,1
-      IF (DOY > wallAvePeriod) THEN
-        tempWall(DOY) = tempWall(DOY - 1) - tempAir(DOY - wallAvePeriod)/wallAvePeriod + tempAir(DOY)/wallAvePeriod
-      ELSE 
-        tempWall(DOY) = tempWall(DOY - 1) - tempAir(365 + DOY - wallAvePeriod)/wallAvePeriod + tempAir(DOY)/wallAvePeriod
-      END IF 
-      IF (tempWall(DOY) .LT. 0.) THEN
-        tempWall(DOY) = tempWall(DOY) / soilFreezeDiv
-      END IF
-    END DO
-
-  ELSE
-    tempWall(:) = tempAir(:)
-    DO DOY = 1,365,1
-      IF (tempWall(DOY) .LT. 0.) THEN
-        tempWall(DOY) = tempWall(DOY) / soilFreezeDiv
-      END IF
-    END DO
-  END IF
+  floorAvePeriod = 5.
 
   ! Then floor
   IF (floorAvePeriod .GE. 365) THEN
@@ -458,48 +333,8 @@ PROGRAM stm
   tempFloor(:) = tempFloor(:) + soilOffset
   tempWall(:) = tempWall(:) + soilOffset
 
-  ! Reading in slurry level
-  ! Set all to NA value
-  level = -99.
-  IF (.NOT. fixedFill) THEN
-    READ(4,*,IOSTAT=fileStat) ! Header
-    READ(4,*) DOY, level(1)
-    levelPrev = level(1)
-    IF (DOY .NE. 1.) THEN
-      WRITE(20,*) "Error: First day of year *must* be 1 in level file! Stopping."
-      WRITE(*,*) "Error: First day of year *must* be 1 in level file! Stopping."
-      STOP
-    END IF
-    DOYprev = 1
-    level(365) = level(1)
-    READ(4,*,IOSTAT=fileStat) DOY, level(DOY)
-    DO WHILE (.NOT. IS_IOSTAT_END(fileStat))
-      IF (DOY .NE. DOYprev) THEN
-        rLevelAve(DOYprev) = (level(DOY) - levelPrev) / (DOY - DOYprev)
-        DOYprev = DOY
-        levelPrev = level(DOY)
-      END IF
-      READ(4,*,IOSTAT=fileStat) DOY, level(DOY)
-    END DO
-    IF (DOY .NE. 365) THEN
-      rLevelAve(DOYPrev) = (level(365) - levelPrev) / (365 - DOYprev)
-    ELSE
-      rlevelAve(DOYPrev) = 0
-    END IF
-
-    ! Fill in missing levels, linear interpolation
-    DO DOY = 2,365,1
-      IF (level(DOY) .LT. 0) THEN
-        level(DOY) = level(DOY - 1) + rLevelAve(DOY - 1) * 1.
-        rLevelAve(DOY) = rLevelAve(DOY - 1)
-      END IF
-    END DO
-
-  END IF
-
-
   ! Set initial slurry temperature and specific heat
-  tempSlurry = tempInitial
+  temp = tempInitial
   cpSlurry = cpLiquid
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -508,33 +343,43 @@ PROGRAM stm
   ! R = 1 is centermost ring
   ! Z = 1 is bottom layer
 
-  dz = storeDepth / nz
-  dr = storeDepth / nr
+  ! Cylindrical geometry 
+  ! R =     nr   nr-1   . . .      1
+  ! Z = nz  C     X    . . .       D
+  !   nz-1  X     X    . . .       X
+  !         X     X    . . .       X
+  !         .     .    . . .       .
+  !         .     .    . . .       .
+  !         .     .    . . .       .
+  !     1   B     X    . . .       A R = 1
+  !                            Z = 1
+
+  ! cell dimensions
+  dz = depth / nz
+  dr = depth / nr
+
+  ! Cumulative radius (to outer surface of each cell)
+  cr(1) = dr
+  DO R = 2,nr,1
+    cr(R) = cr(R-1) + dr
+  END DO
 
   ! Area at surface and bottom
   DO R = 1,nr,1
-    horArea(R) = PI  * (2 * (R + dr) + dr**2)
+    horArea(R) = PI  * (2 * cr(R) - dr**2)
+    verArea(R) = 2 * PI * cr(R)
   END DO
-
-  ! Area under wall
-  DO Z = 1,nz,1
-    wallArea(Z,nr) = 2. * PI * storeDia * dz
-    DO R = 1,nr - 1, 1
-      wallArea(Z,R) = 0.
-    END DO
-  END DO
-
-  ! Circular
-  areaWall = slurryDepth * PI * storeDia 
-
-  !! Mass of slurry in each cell
-  !ncells = nr * nz
 
   DO Z = 1,nz,1
     DO R = 1,nr,1
       cellMass(Z,R) = dSlurry * dz * horArea(R)
     END DO
   END DO
+
+  ! Heat transfer resistance terms R' (K-m2/W)
+  Rbottom = 2. * kConv / dz + Rfloor + Rsoil 
+  Rewall = 2. * kConv / dr + Rwall + Rair
+  Rtop = 2. * kConv / dz + Rair 
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Start simulation
@@ -551,142 +396,128 @@ PROGRAM stm
       YR = YR + 1
     END IF
 
-    ! Radiation fixed for day (W = J/s) so outside of hourly loop
-    ! Radiation is 0 except for surface
-    DO R = 1,nr,1
-      DO Z = 1,nz - 1,1
-       Qrad(Z,R) = 0.
-      END DO
-      Qrad(nz,R) = - horArea(R) * absorp * solRad(DOY)
-    END DO
-
-    ! Start hour loop
-    sumTempSlurry = 0
-    sumQout = 0
-    sumHH = 0
-    sumHHadj = 0
+    !! Start hour loop
+    !sumTempSlurry = 0
+    !sumQout = 0
+    !sumHH = 0
+    !sumHHadj = 0
 
     ! Hour loop
     DO HR = 1,24,1
    
       ! Calculate heat transfer rates, all in watts (J/s)
-      ! Set all heat transfer terms to 0 to start
+      ! Set most heat transfer terms to 0 to start
       DO Z = 1,nz,1
         DO R = 1,nr,1
-          Qfeed(Z,R) = 0.0
+          Qrad(Z,R) = 0.0
           Qslur2air(Z,R) = 0.0
           Qslur2floor(Z,R) = 0.0
-          Qslur2dwall(Z,R) = 0.0
-          Qslur2uwall(Z,R) = 0.0
+          Qslur2wall(Z,R) = 0.0
+          Qconv(Z,R) = 0.0
           ! J/s         J/s-m3  *        t        /   kg/m3 * kg/t
-          Qgen(Z,R) = - heatGen * slurryMass(Z,R) / dSlurry * 1000.
+          Qgen(Z,R) = - heatGen * cellMass(Z,R) / dSlurry * 1000.
         END DO
       END DO
 
-      ! Floor and air
+      ! Radiation, top, and floor
+      ! Radiation fixed for day (W = J/s) so could be outside of hourly loop
       DO R = 1,nr,1
-        Qslur2floor(1,R) = (tempSlurry(1,R) - tempFloor(DOY)) / Rbottom * horArea(1,R)
-        Qslur2air(nz,R) = (tempSlurry(1,R) - tempAir(DOY)) / Rtop * horArea(1,R)
+        Qrad(nz,R) = - horArea(R) * absorp * solRad(DOY)
+        Qslur2air(nz,R) = horArea(R) * (temp(nz,R) - tempAir(DOY)) / Rtop
+        Qslur2floor(1,R) = horArea(R) * (temp(1,R) - tempFloor(DOY)) / Rbottom
       END DO
+
+      R = 2
 
       ! Wall
       DO Z = 1,nz,1
-        Qslur2wall(Z,nr) = (tempSlurry(Z,nr) - tempWall(DOY)) / Rdwall * wallArea(Z,nr)
+        Qslur2wall(Z,nr) = verArea(R) * (temp(Z,nr) - tempWall(DOY)) / Rewall
       END DO
 
-      ! Convection in slurry
+      ! Convection in slurry ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Remember positive is *loss*
-      ! Top
-      Z = nz
-      DO R = 1,nr-1,1
-        Qslur = thermK * (tempSlurry(Z,R) - tempSlurry(Z-1,R)) * 
-      END DO
 
-      ! Total
-      DO Z = 1,nz,1
-        DO R = 1,nr,1
-          Qout(Z,R) = Qfeed(Z,R) + Qrad(Z,R) + Qslur2air(Z,R) + Qslur2wall(Z,R) + Qslur2floor(Z,R) + Qgen(Z,R)
-          ! HH in J
-          !J =  W   *  s/h  * h
-          HH = Qout * 3600. * 1.
+      ! First inner cells with 4 neighbors
+      DO Z = 2,nz-1,1
+        DO R = 2,nr-1,1
+          Qconv(Z,R) = horArea(R) * kConv * (temp(Z,R) - temp(Z-1,R)) / dz  + &  ! Bottom
+                     & horArea(R) * kConv * (temp(Z,R) - temp(Z+1,R)) / dz  + &  ! Top
+                     & horArea(R) * kConv * (temp(Z,R) - temp(Z,R-1)) / dr  + &  ! Inside
+                     & horArea(R) * kConv * (temp(Z,R) - temp(Z,R+1)) / dr       ! Outside
         END DO
       END DO
 
-      ! Melt any frozen slurry
-      HHadj = HH + 1000. * massFrozen * hfSlurry
-      massFrozen = 0.0
+      ! Next center and wall cells
+      ! Not heat transfer inside
+      DO Z = 2,nz-1,1
+        ! Center
+        Qconv(Z,1) = horArea(1) * kConv * (temp(Z,1) - temp(Z-1,1)) / dz  + &   ! Bottom
+                   & horArea(1) * kConv * (temp(Z,1) - temp(Z+1,1)) / dz  + &   ! Top
+                   & horArea(1) * kConv * (temp(Z,1) - temp(Z,1+1)) / dr        ! Outside
+        
+        ! Wall
+        Qconv(Z,nr) = horArea(nr) * kConv * (temp(Z,nr) - temp(Z-1,nr)) / dz  + &   ! Bottom
+                    & horArea(nr) * kConv * (temp(Z,nr) - temp(Z+1,nr)) / dz  + &   ! Top
+                    & horArea(nr) * kConv * (temp(Z,nr) - temp(Z,nr-1)) / dr        ! Inside
+      END DO
 
-      ! Potential temperature change (omitting latent energy and assuming liquid slurry for now)
-      dTemp = - HHadj / (1000. * cpSlurry * slurryMassTot)
+      ! Next, top and bottom cells
+      DO R = 2,nr-1,1
+        ! Top
+        Qconv(nz,R) = horArea(R) * kConv * (temp(nz,R) - temp(nz-1,R)) / dz  + &   ! Bottom
+                    & horArea(R) * kConv * (temp(nz,R) - temp(nz,R-1)) / dr  + &   ! Inside
+                    & horArea(R) * kConv * (temp(nz,R) - temp(nz,R+1)) / dr        ! Outside
 
-      ! Freeze and thaw
-      IF (tempSlurry + dTemp .LT. tempFreeze) THEN
-        ! Use HH to get to 0 C
-        HHadj = HHadj + (tempFreeze - tempSlurry) * 1000. * cpSlurry * slurryMassTot
-        tempSlurry = tempFreeze
+        ! Bottom
+        Qconv(1,R) = horArea(R) * kConv * (temp(1,R) - temp(1+1,R)) / dz  + &   ! Top
+                   & horArea(R) * kConv * (temp(1,R) - temp(1,R-1)) / dr  + &   ! Inside
+                   & horArea(R) * kConv * (temp(1,R) - temp(1,R+1)) / dr        ! Outside
+      END DO
 
-        IF (HHadj .GT. 0.0) THEN
-          ! Still some cooling available for freezing
-          massFrozen = HHadj / hfSlurry / 1000.
-          IF (massFrozen .GE. slurryMassTot) THEN
-            ! More than enough to freeze all slurry
-            massFrozen = slurryMassTot
-            HHadj = HHadj - 1000. * massFrozen * hfSlurry
-          ELSE
-            ! Only some freezes and temperature stays at 0C
-            ! massFrozen from above applies
-            HHadj = 0.0
-          END IF
-        END IF
-      END IF
+      ! A corner next
+      Qconv(1,1)  = horArea(1) * kConv * (temp(1,1) - temp(1+1,1)) / dz  + &    ! Above
+                  & verArea(1) * kConv * (temp(1,1) - temp(1,1+1)) / dr         ! Outside
 
-      ! Weighted cp
-      cpSlurry = massFrozen / slurryMassTot * cpFrozen + (1.0 - massFrozen / slurryMassTot) * cpLiquid
+      ! B corner
+      Qconv(1,nr)  = horArea(1) * kConv * (temp(1,nr) - temp(1+1,nr)) / dz  + &    ! Above
+                   & verArea(1) * kConv * (temp(1,nr) - temp(1,nr-1)) / dr         ! Inside
 
-      ! Recalculate dT, now actual temperature change
-      dTemp = - HHadj / (1000. * cpSlurry * slurryMassTot)
-      tempSlurry = tempSlurry + dTemp
-      
-      ! Steady-state temperature
-      tempSS = (tempAir(DOY)/Rtop*areaAir + tempFloor(DOY)/Rbottom*areaFloor + tempWall(DOY)/Rdwall*areaDwall + &
-        & tempAir(DOY)/Ruwall*areaUwall + (1000. * slurryProd / 86400. * cpLiquid * tempIn) - Qrad - Qgen) / &
-        & (areaAir/Rtop + areaFloor/Rbottom + areaDwall/Rdwall + areaUwall/Ruwall + (1000. * slurryProd / 86400. * cpLiquid))
+      ! C corner
+      Qconv(nz,nr)  = horArea(nz) * kConv * (temp(nz,nr) - temp(nz-1,nr)) / dz  + &   ! Below
+                   & verArea(nz) * kConv * (temp(nz,nr) - temp(nz,nr-1)) / dr         ! Inside
 
-      ! Limit change in temperature to change to SS temp
-      IF (dTemp > 0. .AND. tempSlurry > tempSS) THEN
-        tempSlurry = tempSS
-        useSS = .TRUE.
-      ELSEIF (dTemp < 0. .AND. tempSlurry < tempSS) THEN
-        tempSlurry = tempSS
-        useSS = .TRUE.
-      END IF
-      
-      sumTempSlurry = sumTempSlurry + tempSlurry
-      sumQout = sumQout + Qout
-      sumHH = sumHH + HH
-      sumHHadj = sumHHadj + HHadj
+      ! D corner
+      Qconv(nz,1)  = horArea(nz) * kConv * (temp(nz,1) - temp(nz-1,1)) / dz  + &   ! Below
+                   & verArea(nz) * kConv * (temp(nz,1) - temp(nz,1+1)) / dr        ! Outside
+
+      ! Total heat transfer and temperature change ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      DO Z = 1,nz,1
+        DO R = 1,nr,1
+          Qtot(Z,R) = Qrad(Z,R) + Qslur2air(Z,R) + Qslur2floor(Z,R) + Qslur2wall(Z,R) + &
+                    & Qconv(Z,R) + Qgen(Z,R)
+
+          dTemp = - Qtot(Z,R) / (cpLiquid * cellMass(Z,R)) * 3600. * 1.
+          temp(Z,R) = temp(Z,R) + dTemp
+        END DO
+      END DO
 
     END DO
 
-    sumMassSlurry = sumMassSlurry + slurryMassTot
-    sumSlurryProd = sumSlurryProd + slurryProd
+    Z = 1
+    R = 1
+    WRITE(*,*) DOY, tempAir(DOY), temp(Z, R), Qrad(Z,R), Qslur2air(Z,R), Qconv(Z,R)
+    Z = nz 
+    R = nr
+    WRITE(*,*) DOY, tempAir(DOY), temp(Z, R), Qrad(Z,R), Qslur2air(Z,R), Qconv(Z,R)
 
-    WRITE(10,"(I4,',',I3,',',I4,8(',',F8.2))") DOS, DOY, YR, slurryMassTot, massFrozen, slurryDepth, tempAir(DOY), & 
-        & tempWall(DOY), tempFloor(DOY), tempIn, sumTempSlurry/24.
+    ! Export ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    DO Z = 1,nz,1
+      DO R = 1,nr,1
+      WRITE(10,*) DOS, DOY, YR, Z, R, tempAir(DOY), tempFloor(DOY), temp(Z,R)
+      END DO
+    END DO
 
-    WRITE(11,"(I4,',',I3,',',I4,6(',',F11.3),4(',',F15.0),',',1F5.2,',',L5)") DOS, DOY, YR, Qrad, Qgen, Qslur2air, &
-        & Qslur2floor, Qslur2dwall, Qslur2uwall, Qfeed, sumQout/24., sumHH/24., sumHHadj/24., tempSS, useSS
-
-    WRITE(12,"(I4,',',I3,',',I4,2(',',F15.2))") DOS, DOY, YR, tempAir(DOY), solRad(DOY)
-    
   END DO
-
-  aveMassSlurry = sumMassSlurry / DBLE(nDays)
-  aveSlurryProd = sumSlurryProd /  DBLE(nDays)
-  retentionTime = aveMassSlurry / aveSlurryProd
-  !WRITE(13, *) 'Average slurry mass (t): ', aveMassSlurry
-  !WRITE(13, *) 'Average addition rate (t/d): ', aveSlurryProd
-  !WRITE(13, *) 'Average retention time (d): ', retentionTime
 
   WRITE(20,'(A)') 'Done!'
   WRITE(*,'(A)') 'Done!'

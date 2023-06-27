@@ -3,6 +3,6 @@ Settings for STM heat transfer model
 1         Starting day of simulation as day of year (1-365, no leap years)
 4.0       Slurry level (depth) (m)
 36        Tank diameter (m)
-1018      Effective slurry-to-air convection area (m2) (usually simply upper exposed area)
-1018      Effective area exposed to solar radiation (m2)
 15        Initial slurry temperature (degrees C)
+0.5       Cell height (m)
+0.5       Cell width (m)

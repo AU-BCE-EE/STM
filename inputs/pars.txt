@@ -4,9 +4,12 @@ Slurry physical constants
   Density  specific heat  specific heat  Heat of fusion   point
   (kg/m3)    (J/kg-K)       (J/kg-K)        (J/kg)       (deg. C)
    1000        4190           2100          333000         0.0
+Effective slurry thermal conductivity (W/m-K)
+  Slurry
+  0.6
 Heat transfer resistance terms (K-m2/W)
-  Air    Wall   Floor   Slurry   Soil
-  0.02   0.3     0.3    0.541    1.24 
+  Air    Wall   Floor   Soil
+  0.02   0.3     0.3    1.24 
 Other parameters
  Absorptivity  Soil constant depth    Soil offset    Heat generation
     (-)              (m)                (deg. C)         (W/m3)
