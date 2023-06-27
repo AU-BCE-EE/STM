@@ -1,24 +1,8 @@
 Settings for STM heat transfer model
 1095      Duration of simulation (days)
 1         Starting day of simulation as day of year (1-365, no leap years)
-4.0       Total (maximum) depth (m)
-1.5       Buried depth (to bottom) (m)
-36        Tank dimension (m)
+4.0       Slurry level (depth) (m)
+36        Tank diameter (m)
 1018      Effective slurry-to-air convection area (m2) (usually simply upper exposed area)
 1018      Effective area exposed to solar radiation (m2)
-1000      Initial volume of slurry (m3) (ignored if using level file)
 15        Initial slurry temperature (degrees C)
-None      Added slurry temperature description, Constant = fixed temperature, None = no heat
-0         Temperature of added slurry (degrees C) (ignored if using "None")
-10        Slurry addition rate (tonnes/d) (ignored if using level file)
-400       Residual slurry volume left when emptying (m3) (ignored if using level file)
-100       Emptying day of year (ignored if using level file)
-0         Emptying day of year (ignored if using level file or if < 1 or > 365) 
-
-Weather curve parameter for STM heat transfer model (ignored if using level file)
-Daily average air temperature (degrees C)
-  Minimum      Maximum       Day of year of maximum
-    -5            20              190
-Daily average global solar radiation (W/m2)
-  Minimum      Maximum       Day of year of maximum
-     15           246             190

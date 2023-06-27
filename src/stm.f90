@@ -24,6 +24,9 @@ PROGRAM stm
   INTEGER :: fileStat    ! End of file indicator
   INTEGER :: fileRow     ! File row to check for problem
 
+  ! Discretization
+  INTEGER :: nz, nr 
+
   ! Simulation ID
   CHARACTER (LEN=10) :: ID ! ID code of simulation
   !!CHARACTER (LEN=1) :: ventType ! Type of ventilation
@@ -332,8 +335,6 @@ PROGRAM stm
   ELSE 
     ! Rectangular
     STOP
-    ! Only circular now
-    areaFloor = width * storeDia ! m2
   END IF
   slurryMassTot = slurryVol * dSlurry / 1000. ! Slurry mass is in metric tonnes = Mg = 1000 kg
   slurryMassTotInit = slurryMassTot
@@ -507,28 +508,33 @@ PROGRAM stm
   ! R = 1 is centermost ring
   ! Z = 1 is bottom layer
 
-  nz = CEILING(storeDepth / dz)
-  nr = CEILING(storeDia / 2 / dz)
+  dz = storeDepth / nz
+  dr = storeDepth / nr
 
-  ! Outermost ring is not full of slurry
-  fullr = FLOOR(storeDia / dr)
-  addr = storeDia - fullr * dr
-  ! Same for top layer but this changes over time and is sorted out below
-
-  ! Ignore layer only 10% of normal size
-  IF (addr < 0.1 * dr) THEN
-    nr = fullr
-    addr = 0
-  END IF
-
-  ! Surface areas
-  DO R = 1,fullr,1
+  ! Area at surface and bottom
+  DO R = 1,nr,1
     horArea(R) = PI  * (2 * (R + dr) + dr**2)
   END DO
-  IF (nr > fullr) THEN
-    horArea(fullr) = PI  * (2 * (R + addr) + addr**2)
-  END IF
 
+  ! Area under wall
+  DO Z = 1,nz,1
+    wallArea(Z,nr) = 2. * PI * storeDia * dz
+    DO R = 1,nr - 1, 1
+      wallArea(Z,R) = 0.
+    END DO
+  END DO
+
+  ! Circular
+  areaWall = slurryDepth * PI * storeDia 
+
+  !! Mass of slurry in each cell
+  !ncells = nr * nz
+
+  DO Z = 1,nz,1
+    DO R = 1,nr,1
+      cellMass(Z,R) = dSlurry * dz * horArea(R)
+    END DO
+  END DO
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Start simulation
@@ -543,47 +549,6 @@ PROGRAM stm
     IF (DOY == 366) THEN
       DOY = 1
       YR = YR + 1
-    END IF
-
-    ! Sort out filling rate or fixed emptying
-    ! Assumes given level is for end of day (except for starting mass, which is at start of day)
-    IF (.NOT. fixedFill) THEN
-      IF (DOY == 1) THEN
-        levelPrev = level(365)
-      ELSE 
-        levelPrev = level(DOY - 1)
-      END IF
-      IF (level(DOY) .GT. levelPrev) THEN
-        ! NTS: some inconsistency about slurry level defined at beginning or end of day
-        slurryMassTot = levelPrev * areaFloor * dSlurry/1000.
-        ! Daily slurry addition
-        slurryProd = (level(DOY) - levelPrev) * areaFloor * dSlurry/1000.
-      ELSE IF (level(DOY) .EQ. levelPrev) THEN
-        ! No addition
-        slurryProd = 0.0
-        slurryMassTot = level(DOY) * areaFloor * dSlurry/1000.
-      ELSE IF (level(DOY) .LT. levelPrev) THEN
-        ! Removal, so fixed slurry mass
-        ! NTS: removal at beginning of day, addition at end. . .
-        slurryMassTot = level(DOY) * areaFloor * dSlurry/1000.
-        slurryProd = 0.0
-        IF (massFrozen .GT. slurryMassTot) THEN
-          massFrozen = slurryMassTot
-        END IF
-      END IF
-      levelPrev = level(DOY)
-    ELSE
-      ! Empty and add slurry at beginning of day
-      IF (DOY == emptyDOY1 .OR. DOY == emptyDOY2) THEN
-        slurryMassTot = residVol * dSlurry / 1000.
-      END IF
-      ! If back at startingDOY, reset slurry mass to initial mass
-      IF (DOY == startingDOY) THEN
-        slurryMassTot = slurryMassTotInit
-      END IF
-      IF (massFrozen .GT. slurryMassTot) THEN
-        massFrozen = slurryMassTot
-      END IF
     END IF
 
     ! Radiation fixed for day (W = J/s) so outside of hourly loop
@@ -601,106 +566,51 @@ PROGRAM stm
     sumHH = 0
     sumHHadj = 0
 
-    ! Set use steady state indicator to false at start of each day
-    useSS = .FALSE.
-
-    ! Assume feed is always liquid
-    IF (.NOT. constantTempIn) THEN
-      IF (airTempIn) THEN
-        tempIn = tempAir(DOY)
-      ELSE 
-        ! Overwrite feed temperature if there is no heat transfer in feed
-        tempIn = tempSlurry
-      END IF
-    END IF
-
     ! Hour loop
     DO HR = 1,24,1
-
-      ! Update slurry mass, distributing inflow evenly across day
-      !   t                 t            t/d     / h/d * h = t         
-      slurryMassTot = slurryMassTot + slurryProd / 24. * 1
-
-      ! Get depth and wall area
-      slurryDepth = 1000 * slurryMassTot / (dSlurry*areaFloor)  ! Slurry depth in m
-
-      ! Circular
-      areaDwall = MIN(slurryDepth, buriedDepth) * PI * storeDia 
-      areaUwall = MAX(slurryDepth - buriedDepth, 0.) * PI * storeDia
-
-      ! Check slurry depth
-      IF (slurryDepth .GT. storeDepth) THEN
-        WRITE(20,*) 'Warning: day of year ', DOY, ', hour', hr, ', Slurry depth is greater than maximum depth! Check inputs.'
-        WRITE(20,*)
-      END IF
-
-      ! Mass of slurry in each cell
-      ! Find locations z that are full of slurry (top cells will be partially full only)
-      fullz = FLOOR(slurryDepth / dz)
-      addz = slurryDepth - fullz * dz
-      IF (addz > 0.1 * dz) THEN
-        nz = fullz + 1
-      ELSE 
-        nz = fullz
-        addz = 0
-      END IF
-
-      ncells = nr * nz
-
-      DO Z = 1,fullz,1
-        DO R = 1,fullr,1
-          cellMass(Z,R) = dSlurry * dz * PI  * (2 * (R * dr) + dr**2)
-        END DO
-        IF (nr > fullr) THEN
-          cellMass(Z,nr) = dSlurry * dz * PI  * (2 * (R * addr) + addr**2)
-        END IF
-      END DO
-      IF (nz > fullz) THEN
-        cellMass(nz,nr) = dSlurry * addz * PI  * (2 * (R * addr) + addr**2)
-      END IF
    
       ! Calculate heat transfer rates, all in watts (J/s)
       ! Set all heat transfer terms to 0 to start
       DO Z = 1,nz,1
         DO R = 1,nr,1
           Qfeed(Z,R) = 0.0
-          Qslur2air = 0.0
-          Qslur2floor = 0.0
-          Qslur2dwall = 0.0
-          Qslur2uwall = 0.0
-        END DO
-      END DO
-
-      ! Qfeed is hypothetical rate pretending to make up difference relative to new mass at tempSlurry
-      ! J/s               K           kg/t      t/d     / s/d    *  J/kg-K   
-      QfeedTot = (tempSlurry - tempIn) * 1000 * slurryProd / 86400. * cpLiquid
-
-      ! Distribute Qfeed proportional to slurry mass
-      DO Z = 1,nz,1
-        DO R = 1,nr,1
-          Qfeed(Z,R) = QfeedTot * cellMass(Z,R) / slurryMassTot
+          Qslur2air(Z,R) = 0.0
+          Qslur2floor(Z,R) = 0.0
+          Qslur2dwall(Z,R) = 0.0
+          Qslur2uwall(Z,R) = 0.0
+          ! J/s         J/s-m3  *        t        /   kg/m3 * kg/t
+          Qgen(Z,R) = - heatGen * slurryMass(Z,R) / dSlurry * 1000.
         END DO
       END DO
 
       ! Floor and air
-      DO R = 1,r1,1
+      DO R = 1,nr,1
         Qslur2floor(1,R) = (tempSlurry(1,R) - tempFloor(DOY)) / Rbottom * horArea(1,R)
         Qslur2air(nz,R) = (tempSlurry(1,R) - tempAir(DOY)) / Rtop * horArea(1,R)
       END DO
 
-      WIP
-      WIP
-      ! J/s   J/s-m2-K     K               K          m2
-      Qslur2dwall = (tempSlurry - tempWall(DOY)) / Rdwall * areaDwall
-      Qslur2uwall = (tempSlurry - tempAir(DOY)) / Ruwall * areaUwall
-      ! J/s      J/s-m3  *  t        /   kg/m3 * kg/t
-      Qgen = - heatGen * slurryMassTot / dSlurry * 1000.
-      ! W
-      Qslur2wall = Qslur2dwall + Qslur2uwall
-      Qout = Qfeed + Qrad + Qslur2air + Qslur2wall + Qslur2floor + Qgen
-      ! HH in J
-      !J =  W   *  s/h  * h
-      HH = Qout * 3600. * 1.
+      ! Wall
+      DO Z = 1,nz,1
+        Qslur2wall(Z,nr) = (tempSlurry(Z,nr) - tempWall(DOY)) / Rdwall * wallArea(Z,nr)
+      END DO
+
+      ! Convection in slurry
+      ! Remember positive is *loss*
+      ! Top
+      Z = nz
+      DO R = 1,nr-1,1
+        Qslur = thermK * (tempSlurry(Z,R) - tempSlurry(Z-1,R)) * 
+      END DO
+
+      ! Total
+      DO Z = 1,nz,1
+        DO R = 1,nr,1
+          Qout(Z,R) = Qfeed(Z,R) + Qrad(Z,R) + Qslur2air(Z,R) + Qslur2wall(Z,R) + Qslur2floor(Z,R) + Qgen(Z,R)
+          ! HH in J
+          !J =  W   *  s/h  * h
+          HH = Qout * 3600. * 1.
+        END DO
+      END DO
 
       ! Melt any frozen slurry
       HHadj = HH + 1000. * massFrozen * hfSlurry
