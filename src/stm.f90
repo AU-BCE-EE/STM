@@ -10,7 +10,7 @@ PROGRAM stm
   ! Declaration statements 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Days, and other integers
-  INTEGER :: HR          ! Hour of day (1-24)
+  INTEGER :: TS          ! Time step
   INTEGER :: DOY, DOYprev         ! Day of year (1 - 365)
   INTEGER :: DOS         ! Day of simulation
   INTEGER :: YR          ! Relative year (1 + )
@@ -26,9 +26,10 @@ PROGRAM stm
 
   ! Discretization
   INTEGER :: Z, R
-  INTEGER :: nz, nr 
-  REAL :: dz, dr
+  INTEGER :: nz, nr, nt 
+  REAL :: dz, dr, dt
   REAL, DIMENSION(20) :: horArea, verArea, cr
+  REAL :: innerArea
   REAL, DIMENSION(20, 20) :: cellVol        !
 
   ! Simulation ID
@@ -39,7 +40,7 @@ PROGRAM stm
   CHARACTER (LEN=30) :: userParFile, parFile, weatherFile, levelFile
 
   ! Version string
-  CHARACTER (LEN=45) :: verString = 'Starting STM version 1.0 (9 March 2023)'
+  CHARACTER (LEN=45) :: verString = 'Starting STM version XXX (28 June 2023)'
 
   ! Command line arguments, length
   INTEGER :: numArgs
@@ -59,7 +60,7 @@ PROGRAM stm
 
   ! Geometry of storage structure
   REAL :: depth          ! Slurry depth (m)
-  REAL :: storeDia       ! Length and width of store/pit (m)
+  REAL :: diameter       ! Length and width of store/pit (m)
 
   ! Solar
   REAL :: absorp         ! Slurry or cover effective absorptivity (dimensionless)
@@ -119,7 +120,7 @@ PROGRAM stm
   INTEGER :: ttbeginning = 0, ttend = 0, ttrate = 0
 
   ! Date and time
-  INTEGER, DIMENSION(8) :: dt 
+  INTEGER, DIMENSION(8) :: ttt 
   CHARACTER (LEN = 10) :: date
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -166,7 +167,8 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Output files, name based on ID
   OPEN (UNIT=10,FILE=(''//TRIM(ID)//'_temp.csv'), STATUS='UNKNOWN')
-  !OPEN (UNIT=11,FILE=(''//TRIM(ID)//'_rates.csv'), STATUS='UNKNOWN')
+  OPEN (UNIT=11,FILE=(''//TRIM(ID)//'_area.csv'), STATUS='UNKNOWN')
+  OPEN (UNIT=12,FILE=(''//TRIM(ID)//'_mass.csv'), STATUS='UNKNOWN')
   !OPEN (UNIT=12,FILE=(''//TRIM(ID)//'_weather.csv'), STATUS='UNKNOWN')
 
   ! Log file, name based on ID
@@ -180,8 +182,8 @@ PROGRAM stm
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   WRITE(*,'(A)') verString 
   WRITE(20,'(A)') verString 
-  CALL DATE_AND_TIME(DATE = date, VALUES = dt)
-  WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', dt(1), '/', dt(2), '/', dt(3), ' ', dt(5), ':', dt(6), ':', dt(7)
+  CALL DATE_AND_TIME(DATE = date, VALUES = ttt)
+  WRITE(20,'(A, I4, 5(A, I2.2))') 'Date and time: ', ttt(1), '/', ttt(2), '/', ttt(3), ' ', ttt(5), ':', ttt(6), ':', ttt(7)
   WRITE(20,'(A)') 
   WRITE(20,'(2A)') 'Simulation ID: ', TRIM(ID)
   WRITE(20,'(2A)') 'User par file: ', userParFile
@@ -207,10 +209,11 @@ PROGRAM stm
   READ(1,*) startingDOY
   !READ(1,*) nStores
   READ(1,*) depth
-  READ(1,*) storeDia
+  READ(1,*) diameter
   READ(1,*) tempInitial
   READ(1,*) nz
   READ(1,*) nr
+  READ(1,*) dt
 
   IF (calcWeather) THEN
     READ(1,*)
@@ -242,9 +245,9 @@ PROGRAM stm
   READ(2,*) absorp, soilConstDepth, soilOffset, heatGen
 
   ! Output file header
-  WRITE(10,"(A)") 'Day of sim.,Day of year,Year,Z position,R position,Air T,Floor T,Slurry T'
-  WRITE(10,"(A)") ',,,,,(deg. C),(deg. C),(deg. C)'
-  WRITE(10,"(A)") 'day,doy,year,z,r,air_temp,floor_temp,slurry_temp'
+  WRITE(10,"(A)") 'Day of sim.,Day of year,Year,Z index,R index,Z position,R position,Air T,Floor T,Slurry T'
+  WRITE(10,"(A)") ',,,,,(m),(m),(deg. C),(deg. C),(deg. C)'
+  WRITE(10,"(A)") 'day,doy,year,z,r,zm,rm,air_temp,floor_temp,slurry_temp,rad,air,floor,wall,conv,gen,tot'
 
   !WRITE(11,"(A)") 'Day of sim.,Day of year,Year,Radiation,Generation,Air,Floor,Lower wall,Upper wall,Feed,Total,Total step,&
   !  &          Total step adjusted,Steady state temp,Steady state used'
@@ -355,7 +358,10 @@ PROGRAM stm
 
   ! cell dimensions
   dz = depth / nz
-  dr = depth / nr
+  dr = diameter / 2. / nr
+
+  ! Number of time steps per day
+  nt = 24. / dt
 
   ! Cumulative radius (to outer surface of each cell)
   cr(1) = dr
@@ -364,9 +370,11 @@ PROGRAM stm
   END DO
 
   ! Area at surface and bottom
+  innerArea = 0.0
   DO R = 1,nr,1
-    horArea(R) = PI  * (2 * cr(R) - dr**2)
-    verArea(R) = 2 * PI * cr(R)
+    horArea(R) = PI  * cr(R)**2 - innerArea
+    innerArea = innerArea + horArea(R)
+    verArea(R) = 2 * PI * cr(R) * dz
   END DO
 
   DO Z = 1,nz,1
@@ -376,9 +384,9 @@ PROGRAM stm
   END DO
 
   ! Heat transfer resistance terms R' (K-m2/W)
-  Rbottom = 2. * kConv / dz + Rfloor + Rsoil 
-  Rewall = 2. * kConv / dr + Rwall + Rair
-  Rtop = 2. * kConv / dz + Rair 
+  Rbottom = dz / 2. / kConv + Rfloor + Rsoil 
+  Rewall = dr / 2. / kConv + Rwall + Rair
+  Rtop = dz / 2. / kConv + Rair 
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Start simulation
@@ -402,7 +410,7 @@ PROGRAM stm
     !sumHHadj = 0
 
     ! Hour loop
-    DO HR = 1,24,1
+    DO TS = 1,nt,1
    
       ! Calculate heat transfer rates, all in watts (J/s)
       ! Set most heat transfer terms to 0 to start
@@ -426,8 +434,6 @@ PROGRAM stm
         Qslur2floor(1,R) = horArea(R) * (temp(1,R) - tempFloor(DOY)) / Rbottom
       END DO
 
-      R = 2
-
       ! Wall
       DO Z = 1,nz,1
         Qslur2wall(Z,nr) = verArea(R) * (temp(Z,nr) - tempWall(DOY)) / Rewall
@@ -441,8 +447,8 @@ PROGRAM stm
         DO R = 2,nr-1,1
           Qconv(Z,R) = horArea(R) * kConv * (temp(Z,R) - temp(Z-1,R)) / dz  + &  ! Bottom
                      & horArea(R) * kConv * (temp(Z,R) - temp(Z+1,R)) / dz  + &  ! Top
-                     & horArea(R) * kConv * (temp(Z,R) - temp(Z,R-1)) / dr  + &  ! Inside
-                     & horArea(R) * kConv * (temp(Z,R) - temp(Z,R+1)) / dr       ! Outside
+                     & verArea(R-1) * kConv * (temp(Z,R) - temp(Z,R-1)) / dr  + &  ! Inside
+                     & verArea(R) * kConv * (temp(Z,R) - temp(Z,R+1)) / dr       ! Outside
         END DO
       END DO
 
@@ -450,44 +456,56 @@ PROGRAM stm
       ! Not heat transfer inside
       DO Z = 2,nz-1,1
         ! Center
-        Qconv(Z,1) = horArea(1) * kConv * (temp(Z,1) - temp(Z-1,1)) / dz  + &   ! Bottom
-                   & horArea(1) * kConv * (temp(Z,1) - temp(Z+1,1)) / dz  + &   ! Top
-                   & horArea(1) * kConv * (temp(Z,1) - temp(Z,1+1)) / dr        ! Outside
+        R = 1
+        Qconv(Z,R) = horArea(R) * kConv * (temp(Z,R) - temp(Z-1,R)) / dz  + &   ! Bottom
+                   & horArea(R) * kConv * (temp(Z,R) - temp(Z+1,R)) / dz  + &   ! Top
+                   & verArea(R) * kConv * (temp(Z,R) - temp(Z,R+1)) / dr        ! Outside
         
         ! Wall
-        Qconv(Z,nr) = horArea(nr) * kConv * (temp(Z,nr) - temp(Z-1,nr)) / dz  + &   ! Bottom
-                    & horArea(nr) * kConv * (temp(Z,nr) - temp(Z+1,nr)) / dz  + &   ! Top
-                    & horArea(nr) * kConv * (temp(Z,nr) - temp(Z,nr-1)) / dr        ! Inside
+        R = nr
+        Qconv(Z,R) = horArea(R) * kConv * (temp(Z,R) - temp(Z-1,R)) / dz  + &   ! Bottom
+                    & horArea(R) * kConv * (temp(Z,R) - temp(Z+1,R)) / dz  + &   ! Top
+                    & verArea(R-1) * kConv * (temp(Z,R) - temp(Z,R-1)) / dr        ! Inside
       END DO
 
       ! Next, top and bottom cells
       DO R = 2,nr-1,1
         ! Top
-        Qconv(nz,R) = horArea(R) * kConv * (temp(nz,R) - temp(nz-1,R)) / dz  + &   ! Bottom
-                    & horArea(R) * kConv * (temp(nz,R) - temp(nz,R-1)) / dr  + &   ! Inside
-                    & horArea(R) * kConv * (temp(nz,R) - temp(nz,R+1)) / dr        ! Outside
+        Z = nz
+        Qconv(Z,R) = horArea(R) * kConv * (temp(Z,R) - temp(Z-1,R)) / dz  + &   ! Bottom
+                    & verArea(R-1) * kConv * (temp(Z,R) - temp(Z,R-1)) / dr  + &   ! Inside
+                    & verArea(R) * kConv * (temp(Z,R) - temp(Z,R+1)) / dr        ! Outside
 
         ! Bottom
-        Qconv(1,R) = horArea(R) * kConv * (temp(1,R) - temp(1+1,R)) / dz  + &   ! Top
-                   & horArea(R) * kConv * (temp(1,R) - temp(1,R-1)) / dr  + &   ! Inside
-                   & horArea(R) * kConv * (temp(1,R) - temp(1,R+1)) / dr        ! Outside
+        Z = 1
+        Qconv(Z,R) = horArea(R) * kConv * (temp(Z,R) - temp(Z+1,R)) / dz  + &   ! Top
+                   & verArea(R-1) * kConv * (temp(Z,R) - temp(Z,R-1)) / dr  + &   ! Inside
+                   & verArea(R) * kConv * (temp(Z,R) - temp(Z,R+1)) / dr        ! Outside
       END DO
 
       ! A corner next
-      Qconv(1,1)  = horArea(1) * kConv * (temp(1,1) - temp(1+1,1)) / dz  + &    ! Above
-                  & verArea(1) * kConv * (temp(1,1) - temp(1,1+1)) / dr         ! Outside
+      Z = 1
+      R = 1
+      Qconv(Z,R)  = horArea(R) * kConv * (temp(Z,R) - temp(Z+1,R)) / dz  + &    ! Above
+                  & verArea(R) * kConv * (temp(Z,R) - temp(Z,R+1)) / dr         ! Outside
 
       ! B corner
-      Qconv(1,nr)  = horArea(1) * kConv * (temp(1,nr) - temp(1+1,nr)) / dz  + &    ! Above
-                   & verArea(1) * kConv * (temp(1,nr) - temp(1,nr-1)) / dr         ! Inside
+      Z = 1
+      R = nr
+      Qconv(Z,R)  = horArea(R) * kConv * (temp(Z,R) - temp(Z+1,R)) / dz  + &    ! Above
+                   & verArea(R-1) * kConv * (temp(Z,R) - temp(Z,R-1)) / dr         ! Inside
 
       ! C corner
-      Qconv(nz,nr)  = horArea(nz) * kConv * (temp(nz,nr) - temp(nz-1,nr)) / dz  + &   ! Below
-                   & verArea(nz) * kConv * (temp(nz,nr) - temp(nz,nr-1)) / dr         ! Inside
+      Z = nz
+      R = nr
+      Qconv(Z,R)  = horArea(R) * kConv * (temp(Z,R) - temp(Z-1,R)) / dz  + &   ! Below
+                   & verArea(R-1) * kConv * (temp(Z,R) - temp(Z,R-1)) / dr         ! Inside
 
       ! D corner
-      Qconv(nz,1)  = horArea(nz) * kConv * (temp(nz,1) - temp(nz-1,1)) / dz  + &   ! Below
-                   & verArea(nz) * kConv * (temp(nz,1) - temp(nz,1+1)) / dr        ! Outside
+      Z = nz
+      R = 1
+      Qconv(Z,R)  = horArea(Z) * kConv * (temp(Z,R) - temp(Z-1,R)) / dz  + &   ! Below
+                   & verArea(R) * kConv * (temp(Z,R) - temp(Z,R+1)) / dr        ! Outside
 
       ! Total heat transfer and temperature change ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       DO Z = 1,nz,1
@@ -495,7 +513,7 @@ PROGRAM stm
           Qtot(Z,R) = Qrad(Z,R) + Qslur2air(Z,R) + Qslur2floor(Z,R) + Qslur2wall(Z,R) + &
                     & Qconv(Z,R) + Qgen(Z,R)
 
-          dTemp = - Qtot(Z,R) / (cpLiquid * cellMass(Z,R)) * 3600. * 1.
+          dTemp = - Qtot(Z,R) / (cpLiquid * cellMass(Z,R)) * 3600. * dt
           temp(Z,R) = temp(Z,R) + dTemp
         END DO
       END DO
@@ -505,11 +523,26 @@ PROGRAM stm
     ! Export ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     DO Z = 1,nz,1
       DO R = 1,nr,1
-      WRITE(10,"(I4,',',I3,',',I4,',',I3,',',I3,3(',',F8.2))") DOS, DOY, YR, Z, R, tempAir(DOY), tempFloor(DOY), temp(Z,R)
+      WRITE(10,"(I4,',',I3,',',I4,',',I3,',',I3,12(',',F8.2))") DOS, DOY, YR, Z, R, &
+               & Z * dz - dz / 2, R * dr - dr / 2, tempAir(DOY), tempFloor(DOY), & 
+               & temp(Z,R), Qrad(Z,R), Qslur2air(Z,R), Qslur2floor(Z,R), Qslur2wall(Z,R), &
+               & Qconv(Z,R), Qgen(Z,R), Qtot(Z,R)
       END DO
     END DO
 
   END DO
+
+  ! Export dimension info for checking
+  DO R = 1,nr,1
+    WRITE(11,"(I4,',',5(',',F9.3))") R, dr, cr(R), dz, horArea(R), verArea(R)
+  END DO
+
+  DO Z = 1,nz,1
+    DO R = 1,nr,1
+      WRITE(12,"(2(I4,','),F15.3)") Z, R, cellMass(Z,R)
+    END DO
+  END DO
+
 
   WRITE(20,'(A)') 'Done!'
   WRITE(*,'(A)') 'Done!'
