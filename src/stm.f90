@@ -29,10 +29,10 @@ PROGRAM stm
   !!CHARACTER (LEN=1) :: ventType ! Type of ventilation
 
   ! File names
-  CHARACTER (LEN=30) :: userParFile, parFile, weatherFile, levelFile
+  CHARACTER (LEN=50) :: userParFile, parFile, weatherFile, levelFile
 
   ! Version string
-  CHARACTER (LEN=45) :: verString = 'Starting STM version 1.0 (9 March 2023)'
+  CHARACTER (LEN=45) :: verString = 'Starting STM version 1.1 (20 March 2024)'
 
   ! Command line arguments, length
   INTEGER :: numArgs
